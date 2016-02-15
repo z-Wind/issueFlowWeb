@@ -1,0 +1,26 @@
+table, th, td {
+    border: 3px solid black;
+    border-collapse: collapse;
+}
+
+.item {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    width: 100%;
+}
+
+.item th {
+    width: 25%;
+}
+
+.tag > div {
+    display: inline;
+    border: 1px solid black;
+}
+
+.itemNext > div {
+    display: inline;
+    cursor: pointer;
+    border: 1px solid black;
+}

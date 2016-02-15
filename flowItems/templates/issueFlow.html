@@ -1,0 +1,36 @@
+{% load staticfiles %}
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" type="text/css" href="{% static 'myStyle.css' %}">
+    <meta charset="UTF-8">
+    <title>Issue Flow</title>
+</head>
+
+<body>
+    <div id="id_menu">
+        <form method="get" action="search.html">
+            <input type="text" name="q">
+        </form>
+    </div>
+    <div id="id_main">
+    </div>
+    <div id="id_form" style="display:none">
+        <div></div>
+        <form id="id_input_form" action="" method="post">
+            <table>
+                {{ f.as_table }}
+            </table>
+            <input type="button" value="提交">
+        </form>
+    </div>
+    <script src="{% static 'jquery-1.12.0.min.js' %}"></script>
+    <script src="{% static 'myScripts.js' %}"></script>
+    <script>
+        csrf = {name:'csrfmiddlewaretoken', value: '{{ csrf_token }}'};
+    </script>
+</body>
+
+</html>
