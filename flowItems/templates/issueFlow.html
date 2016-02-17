@@ -17,13 +17,14 @@
     </div>
     <div id="id_main">
     </div>
-    <div id="id_form" style="display:none">
+    <div id="id_form" style="display:none; position:absolute; background:white">
         <div></div>
         <form id="id_input_form" action="" method="post">
             <table>
                 {{ f.as_table }}
             </table>
             <input type="button" value="提交">
+            <input type="button" value="取消">
         </form>
     </div>
     <script src="{% static 'jquery/jquery-1.12.0.min.js' %}"></script>

@@ -25,7 +25,6 @@ table, th, td {
     border: 1px solid black;
 }
 
-
 /*node css*/
 .link {
   stroke: #000;
@@ -33,12 +32,30 @@ table, th, td {
 }
 
 .node {
-  cursor: move;
+  cursor: pointer;
   fill: #ccc;
   stroke: #000;
   stroke-width: 1.5px;
 }
 
 .node.fixed {
-  fill: #f00;
+  fill: rgb(128, 128, 128);
+}
+
+.focus {
+  stroke: #00f;
+}
+
+.text {
+  font-family: sans-serif;
+  pointer-events: none;
+}
+
+svg {
+    cursor: move;
+}
+
+.overlay {
+  fill: none;
+  pointer-events: all;
 }

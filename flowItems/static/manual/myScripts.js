@@ -14,15 +14,12 @@ function itemToD3JSon(item, dataset) {
     return dataset;
 }
 
-var graph = new flowChart("#id_main");
+var graph = new flowChart("#id_main", screen.availWidth, screen.availHeight, 30);
 
 function itemShowSVG(item) {
-    var w = 960;
-	var h = 500;
-
     var dataset = itemToD3JSon(item);
 
-    graph.drawGraph(dataset, w, h, 40);
+    graph.drawGraph(dataset);
 }
 
 function getItems(id_list) {
@@ -49,16 +46,25 @@ $(document).ready(function() {
     });
 
     //新增 ITEM
-    $('#id_main').on('click', '.itemNext > input:button', function() {
-        var p_id = $(this).parents('.item').children('input:hidden').val();
-        $('#id_pre_item option[value="' + p_id + '"]').attr('selected', 'selected');
-        $('#id_form').slideDown('slow', function() {
-            $(document).scrollTop($("#id_form").offset().top);
-        });
+    $('#id_main').on('click', '.gnode', function(event) {
+        if (event.ctrlKey) {
+            $('#id_form').css({'top':event.pageY+10, 'left':event.pageX+10});
+            var p_id = $(this).attr("gid");
+            $('#id_pre_item option').attr('selected', false);
+            $('#id_pre_item option[value="' + p_id + '"]').attr('selected', 'selected');
+            $('#id_pre_item').val(p_id).change();
+            $('#id_form').slideDown('slow');
+        }
+    });
+
+    //取消提交
+    $('#id_input_form > input:button:last-of-type').click(function() {
+        $('#id_form').slideUp('slow');
+        $("#id_input_form")[0].reset();
     });
 
     //提交 ITEM
-    $('#id_input_form > input:button').click(function() {
+    $('#id_input_form > input:button:first-of-type').click(function() {
         $('#id_pre_item').prop('disabled', false);
         var form_data = $('#id_input_form').serializeArray();
         form_data.push(csrf);
@@ -77,9 +83,9 @@ $(document).ready(function() {
                     $('#id_form > div').empty();
                     $('#id_form > div').append(str);
                 } else {
-                    $('#id_main').append('<p align="center"> &dArr;</p>');
                     getItems([data.id]);
                     $('#id_form').slideUp('slow');
+                    $("#id_input_form")[0].reset();
                 }
             },
             //發送請求之前可在此修改 XMLHttpRequest 物件
