@@ -9,7 +9,7 @@ import json
 
 
 # Create your views here.
-def issueFlow(request):
+def issueFlow(request, first_id):
     f = ItemForm()
     return render(request, 'issueFlow.html', locals())
 
@@ -18,17 +18,19 @@ def getItems(request):
     dic = {"error": "Error Contact"}
     if request.is_ajax():
         try:
-            item = Item.objects.get(pk=request.GET.get('id'))
-            dic = {
-                'id': item.id,
-                'ph': item.ph,
-                'relatedTags': [{f.name: getattr(t, f.name)
-                                 for f in Tag._meta.fields}
-                                for t in item.relatedTags.all()],
-                'itemNext': [{f.name: getattr(i, f.name)
-                              for f in Item._meta.fields}
-                             for i in item.itemNexts.all()],
-            }
+            dic = {}
+            for id in request.GET.getlist('id[]'):
+                item = Item.objects.get(pk=id)
+                dic.update({
+                    'id': item.id,
+                    'ph': item.ph,
+                    'relatedTags': [{f.name: getattr(t, f.name)
+                                     for f in Tag._meta.fields}
+                                    for t in item.relatedTags.all()],
+                    'itemNext': [{f.name: getattr(i, f.name)
+                                  for f in Item._meta.fields}
+                                 for i in item.itemNexts.all()],
+                })
         except Item.DoesNotExist:
             dic = {'error': 'Not Found'}
     return JsonResponse(dic)

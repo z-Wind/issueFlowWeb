@@ -1,60 +1,51 @@
 /*jshint multistr: true */
-function itemShow(item) {
-    var i;
-    var tagdiv = "";
-    for (i = 0; i < item.relatedTags.length; i++) {
-        tagdiv += ("<div>" +
-            '<input type="hidden" value="' + item.relatedTags[i].id.toString() + '"/>' +
-            item.relatedTags[i].name +
-            "</div>");
+
+function itemToD3JSon(item, dataset) {
+    dataset = typeof dataset !== 'undefined' ? dataset : { "nodes":[], "links":[]};
+    var major = {"id": item.id, "ph": item.ph};
+    dataset.nodes.push(major);
+
+    for (i=0; i<item.itemNext.length; i++) {
+        var next = {"id": item.itemNext[i].id, "ph": item.itemNext[i].ph};
+        dataset.nodes.push(next);
+        dataset.links.push({"source": major, "target": next});
     }
 
-    var itemNextdiv = "";
-    for (i = 0; i < item.itemNext.length; i++) {
-        itemNextdiv += ("<div>" +
-            '<input type="hidden" value="' + item.itemNext[i].id.toString() + '"/>' +
-            item.itemNext[i].ph +
-            "</div>");
-    }
-
-    var show =
-        '<table class="item"> \
-        <input type="hidden" value="' + item.id.toString() + '"/> \
-        <tr> \
-            <th class="tag"> ' + tagdiv +
-        '<input type="button" value="Add"> \
-            </th> \
-            <td class="major" style="width:50%">' + item.ph + '</td> \
-            <td  class="itemNext">' +
-        itemNextdiv +
-        '<input type="button" value="New"> \
-            </td> \
-        </tr> \
-    </table>';
-    return show;
+    return dataset;
 }
 
-function getItems(id_n) {
+var graph = new flowChart("#id_main");
+
+function itemShowSVG(item) {
+    var w = 960;
+	var h = 500;
+
+    var dataset = itemToD3JSon(item);
+
+    graph.drawGraph(dataset, w, h, 40);
+}
+
+function getItems(id_list) {
     var returnValue = {};
     $.getJSON("/getItems/", {
-            id: id_n
+            id: id_list
         },
         function(jdata) {
-            $('#id_main').append(itemShow(jdata));
+            //$('#id_main').append(itemShow(jdata));
+            itemShowSVG(jdata);
         });
 }
 
 $(document).ready(function() {
 
     //初始化
-    if ($('#id_main').children().length === 0) {
-        getItems(2);
+    if ($('#id_main').children().length === 1) {
+        getItems([first_id]);
     }
 
     //顯示下一步
-    $('#id_main').on('click', '.itemNext > div', function() {
-        $('#id_main').append('<p align="center"> &dArr;</p>');
-        getItems($(this).children('input:hidden').val());
+    $('#id_main').on('dblclick', '.gnode', function() {
+        getItems([$(this).attr("gid")]);
     });
 
     //新增 ITEM
@@ -87,7 +78,7 @@ $(document).ready(function() {
                     $('#id_form > div').append(str);
                 } else {
                     $('#id_main').append('<p align="center"> &dArr;</p>');
-                    getItems(data.id);
+                    getItems([data.id]);
                     $('#id_form').slideUp('slow');
                 }
             },
