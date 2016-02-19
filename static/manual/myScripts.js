@@ -1,42 +1,67 @@
 /*jshint multistr: true */
 
-function itemToD3JSon(items, dataset) {
-    dataset = typeof dataset !== 'undefined' ? dataset : {
-        "nodes": [],
-        "links": []
-    };
+function checkItemSame(arr, id)
+{
+    for (var i = 0; i < arr.length; i++) {
+        if (arr[i].id === id) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function checkLinkSame(arr, s_id, t_id)
+{
+    for (var i = 0; i < arr.length; i++) {
+        if ((arr[i].source.id === s_id && arr[i].target.id === t_id) ||
+            (arr[i].target.id === s_id && arr[i].source.id === t_id)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function itemToD3JSon(items) {
+    var datasets = {};
     for(var key in items)
     {
-        item = items[key];
+        var dataset = {"nodes": [], "links": []};
+        var item = items[key];
         var major = {
             "id": item.id,
             "ph": item.ph
         };
-        dataset.nodes.push(major);
+
+        if(!checkItemSame(dataset.nodes, major.id))
+            dataset.nodes.push(major);
 
         for (i = 0; i < item.itemNext.length; i++) {
             var next = {
                 "id": item.itemNext[i].id,
                 "ph": item.itemNext[i].ph
             };
-            dataset.nodes.push(next);
-            dataset.links.push({
-                "source": major,
-                "target": next
-            });
+            if(!checkItemSame(dataset.nodes, next.id))
+                dataset.nodes.push(next);
+            if(!(checkLinkSame(dataset.links, major.id, next.id)))
+                dataset.links.push({
+                    "source": major,
+                    "target": next
+                });
         }
+
+        datasets[key] = dataset;
     }
 
-    return dataset;
+    return datasets;
 }
 
 //var graph = new flowChart("#id_main", screen.availWidth, screen.availHeight, 30);
 var graph = new flowChart("#id_main", 1000, 600);
 
 function itemShowSVG(items) {
-    var dataset = itemToD3JSon(items);
+    var datasets = itemToD3JSon(items);
 
-    graph.drawGraph(dataset);
+    graph.drawGraph(datasets);
 }
 
 function getItems(id_list) {
@@ -45,7 +70,6 @@ function getItems(id_list) {
             id: id_list
         },
         function(jdata) {
-            //$('#id_main').append(itemShow(jdata));
             itemShowSVG(jdata);
         });
 }
@@ -142,7 +166,7 @@ $(document).ready(function() {
             //如添加 header 等，你可以在此函式中 return flase 取消 Ajax request。
             beforeSend: function(XMLHttpRequest) {
                 // the options for this ajax request
-                checkForm("#id_input_form", ['pre_item', 'ph']);
+                return checkForm("#id_input_form", ['pre_item', 'ph']);
             },
             //請求完成時執行的函式(不論結果是success或error)。
             complete: function(XMLHttpRequest, textStatus) {

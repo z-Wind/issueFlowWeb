@@ -125,11 +125,16 @@ function flowChart(selector, width, height, cr) {
         container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
     }
 
-    this.drawGraph = function(dataset) {
-        this.additems(dataset);
+    this.drawGraph = function(datasets) {
+        force.stop();
+        for(var key in datasets)
+        {
+            this.additem(datasets[key]);
+        }
+        force.start();
     };
 
-    this.additems = function(dataset) {
+    this.additem = function(dataset) {
         var i, j;
 
         // check same
@@ -159,6 +164,11 @@ function flowChart(selector, width, height, cr) {
             }
         }
 
+        if(dataset.links.length === 0 && dataset.nodes.length === 0)
+        {
+            return;
+        }
+
         // 因為 obj 值一樣，也不代表是同一個物件，所以重新指定
         for (i = 0; i < dataset.links.length; i++) {
             for (j = 0; j < nodes.length; j++) {
@@ -178,22 +188,22 @@ function flowChart(selector, width, height, cr) {
             links.push(dataset.links[i]);
         }
 
-        linkData = container.selectAll(".link")
+        var linkData = container.selectAll(".link")
             .data(force.links(), function(d) {
                 return Math.min(d.source.id, d.target.id) + "-" + Math.max(d.source.id, d.target.id);
             });
-        link = linkData.enter().insert("line", ".gnode")
+        var link = linkData.enter().insert("line", ".gnode")
             .attr("class", "link")
             .attr("lid", function(d) {
                 return Math.min(d.source.id, d.target.id) + "-" + Math.max(d.source.id, d.target.id);
             });
         linkData.exit().remove();
 
-        gnodeData = container.selectAll('g.gnode')
+        var gnodeData = container.selectAll('g.gnode')
             .data(force.nodes(), function(d) {
                 return d.id;
             });
-        gnode = gnodeData.enter().append("g")
+        var gnode = gnodeData.enter().append("g")
             .classed('gnode', true)
             .attr("gid", function(d) {
                 return d.id;
@@ -240,13 +250,12 @@ function flowChart(selector, width, height, cr) {
                         .text(function(d) {
                             return d.ph;
                         });
-        force.start();
     };
 
     this.clear = function()
     {
         nodes.splice(0,nodes.length);
         links.splice(0,links.length);
-        this.additems({"nodes": [], "links": []});
+        this.additem({"nodes": [], "links": []});
     };
 }
