@@ -1,0 +1,35 @@
+/*node css*/
+.link {
+  stroke: #000;
+  stroke-width: 1.5px;
+}
+
+.node {
+  cursor: pointer;
+  fill: #ccc;
+  stroke: #000;
+  stroke-width: 1.5px;
+}
+
+.node.fixed {
+  fill: rgb(128, 128, 128);
+}
+
+.highlight {
+  stroke: #00f;
+}
+
+.focus {
+  stroke: yellow;
+  stroke-width: 2px;
+}
+
+.text {
+  font-family: sans-serif;
+  pointer-events: none;
+}
+
+.overlay {
+  fill: none;
+  pointer-events: all;
+}

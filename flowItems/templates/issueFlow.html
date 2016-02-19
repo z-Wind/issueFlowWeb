@@ -1,33 +1,44 @@
+{% extends 'base.html' %}
 {% load staticfiles %}
 
-<!DOCTYPE html>
-<html>
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{% static 'manual/flowChart.css' %}">
+{% endblock %}
 
-<head>
-    <link rel="stylesheet" type="text/css" href="{% static 'manual/myStyle.css' %}">
-    <meta charset="UTF-8">
-    <title>Issue Flow</title>
-</head>
-
-<body>
-    <div id="id_menu">
-        <form method="get" action="search.html">
-            <input type="text" name="q">
-        </form>
+{% block issueFlow %}
+    <div class="jumbotron" style="padding-top: 2px; padding-bottom: 2px;">
+        <div id="id_main" class="row text-center">
+        </div>
     </div>
-    <div id="id_main">
-    </div>
-    <div id="id_form" style="display:none; position:absolute; background:white">
+    <div id="id_form" style="display:none; position:absolute; background:white;">
         <div></div>
-        <form id="id_input_form" action="" method="post">
-            <table>
-                {{ f.as_table }}
+        <form id="id_input_form" action="" method="post" onsubmit="return false">
+            <table class="table table-bordered">
+                {{f.as_table}}
             </table>
-            <input type="button" value="提交">
-            <input type="button" value="取消">
+            <input class="btn btn-default" type="button" value="提交">
+            <input class="btn btn-default" type="reset" value="取消">
         </form>
+        <div id="id_itemList">
+            <table style="width: 150px">
+                <tr>
+                    <td>
+                        <select size=24 id="id_itemListSel">
+                        </select>
+                    </td>
+                </tr>
+            </table>
+        </div>
     </div>
-    <script src="{% static 'jquery/jquery-1.12.0.min.js' %}"></script>
+    <div style="position:absolute; top:55px; left:0px;">
+            <input type="button" class="btn btn-success" value="記錄" onclick="saveData()">
+            <span class="file-input btn btn-primary btn-file">
+                回溯
+                <input type="file" id="callback">
+            <span>
+    </div>
+{% endblock %}
+{% block script %}
     <script src="{% static 'd3/d3.min.js' %}"></script>
     <script src="{% static 'manual/flowChart.js' %}"></script>
     <script src="{% static 'manual/myScripts.js' %}"></script>
@@ -35,6 +46,4 @@
         var csrf = {name:'csrfmiddlewaretoken', value: '{{ csrf_token }}'};
         var first_id = {{first_id}};
     </script>
-</body>
-
-</html>
+{% endblock %}
