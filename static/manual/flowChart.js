@@ -72,7 +72,9 @@ function flowChart(selector, width, height, cr) {
     // click gnode
     function g_click(d) {
         if (d3.event.altKey) {
-            d3.select(this).selectAll('circle').classed("fixed", d.fixed = !d.fixed);
+            var dcircleSel = d3.select(this).selectAll('circle');
+            dcircleSel.classed("fixed", !dcircleSel.classed("fixed"));
+            d.fixed = dcircleSel.classed("fixed");
         }
     }
 
@@ -128,9 +130,48 @@ function flowChart(selector, width, height, cr) {
         }
     }
 
+    var tcr = this.cr;
     // for zoom
     function zoom() {
         container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+
+        container.selectAll(".gnode > text")
+            .text(function(d) {
+                //一個中文字抵兩個英文字
+                var min_n = 4*2;
+                return cutString(this, d.ph, min_n*zoomListener.scale(), tcr*2-6);
+            });
+    }
+
+    // 只顯示特定數目以下的文字
+    function cutString(textObj, str, min_n, tl)
+    {
+        min_n = Math.round(min_n);
+        var strC = encodeURIComponent(str).replace(/%[A-F\d]{2}%[A-F\d]{2}%[A-F\d]{2}/g, '^$');
+        var strF = strC.replace(/%[A-F\d]{2}/g, 'S');
+
+        if(strF.length > min_n)
+        {
+            d3.select(textObj).attr('textLength', tl);
+            d3.select(textObj).attr('lengthAdjust', "spacingAndGlyphs");
+
+            var uCount = (strF.match(/\^\$/g) || []).length/2;
+
+            if(strF[min_n] === '$' && strF[min_n-1] === '^')
+                return str.slice(0, Math.max(1, min_n-1-uCount)) + "...";
+            else {
+                return str.slice(0, Math.max(1, min_n-uCount)) + "...";
+            }
+        }
+        else if (strF.length >= 8){
+            d3.select(textObj).attr('textLength', tl);
+            d3.select(textObj).attr('lengthAdjust', "spacingAndGlyphs");
+        }
+        else {
+            d3.select(textObj).attr('textLength', null);
+            d3.select(textObj).attr('lengthAdjust', null);
+        }
+        return str;
     }
 
     // 畫圖
@@ -230,18 +271,12 @@ function flowChart(selector, width, height, cr) {
             .attr("r", this.cr)
             .classed("node", true);
 
-        var min_n = 3*3;
         var tcr = this.cr;
         var label = gnode.append("text")
             .text(function(d) {
-                var str = encodeURIComponent(d.ph);
-                str = str.replace(/%[A-F\d]{2}/g, 'U');
-                if(str.length > min_n)
-                {
-                    d3.select(this).attr('textLength', tcr*2-5);
-                    d3.select(this).attr('lengthAdjust', "spacingAndGlyphs");
-                }
-                return d.ph;
+                //一個中文字抵兩個英文字
+                var min_n = 4*2;
+                return cutString(this, d.ph, min_n, tcr*2-6);
             })
             .attr({
                 'text-anchor': 'middle', //文字置中

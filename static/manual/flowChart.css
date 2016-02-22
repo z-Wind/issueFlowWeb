@@ -1,3 +1,4 @@
+/* normal */
 .overlay {
   fill: none;
   pointer-events: all;
@@ -12,23 +13,12 @@
   cursor: pointer;
   fill: #ccc;
   stroke: #000;
-  stroke-width: 1.5px;
-}
-
-.gnode .highlight, .link.highlight{
-  stroke: #00f;
   stroke-width: 2px;
 }
 
-.gnode .focus {
-  stroke: yellow;
-  stroke-width: 4px;
-}
-
-.gnode .focus.highlight{
-  stroke: #00f;
-  fill: yellow;
-  stroke-width: 2px;
+/* hasChild */
+.gnode .hasChild {
+    fill: #eee;
 }
 
 .gnode .text {
@@ -36,14 +26,35 @@
   pointer-events: none;
 }
 
-.gnode .hasChild {
-    fill: rgb(123, 200, 138);
+/* focus */
+.gnode .focus {
+  stroke: #FF8800;
+  stroke-width: 2px;
 }
 
+.gnode .focus.highlight{
+  stroke: #00f;
+  fill: #FFAA33;
+  stroke-width: 2px;
+}
+
+.gnode .focus.highlight.fixed{
+  stroke: #00f;
+  fill: #EE9922;
+  stroke-width: 2px;
+}
+
+/* highlight */
+.gnode .highlight, .link.highlight{
+  stroke: #00f;
+  stroke-width: 2px;
+}
+
+/* fixed */
 .gnode .fixed {
-    fill: rgb(128, 128, 128);
+    fill: #66FF66;
 }
 
 .gnode .fixed.hasChild {
-    fill: rgb(97, 143, 106);
+    fill: #AAFFAA;
 }
