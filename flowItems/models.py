@@ -1,6 +1,5 @@
 from django.db import models
 
-
 # Create your models here.
 class Tag(models.Model):
     code = models.CharField(verbose_name='代碼', max_length=10)
@@ -17,9 +16,10 @@ class Item(models.Model):
     ph = models.CharField(verbose_name='現象', max_length=20)
     relatedTags = models.ManyToManyField(Tag, blank=True, verbose_name='標籤')
     itemNexts = models.ManyToManyField('self', blank=True, verbose_name='下一步')
+    s_count = models.PositiveIntegerField(verbose_name='搜尋次數', default=0)
 
     def __str__(self):
         return self.ph
 
     class Meta:
-        ordering = ['ph']
+        ordering = ['-s_count']

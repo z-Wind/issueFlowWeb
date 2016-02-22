@@ -2,7 +2,7 @@
 {% load myfilters %}
 {% block FormContent %}
 <!-- form inquiry -->
-<div class="row" id="inquiryDatas">
+<!--<div class="row" id="inquiryDatas">
     <form action="#inquiryDatas" method="get">
         <table class="table table-bordered">
             <caption>查詢項目</caption>
@@ -19,7 +19,7 @@
         <input type="hidden" name="ok" value="yes">
         <input type="submit" class="btn btn-default" name="inquiry" value="查詢">
     </form>
-</div>
+</div>-->
 {% endblock %}
 
 {% block dataTable %}
@@ -38,7 +38,7 @@
                     <td><a href="{% url 'flowItemissueFlow' data.0 %}"><div>{{data.1}}</div></a></td>
                 </tr>
             {% empty %}
-                <h1>無資料，請新增節點</h1>
+                <a href="{% url 'flowItemsNewNode' %}?{{searchStr}}"><h1>無資料，請新增節點</h1></a>
             {% endfor %}
         <tbody>
     </table>

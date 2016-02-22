@@ -6,8 +6,18 @@
 {% endblock %}
 
 {% block issueFlow %}
+    {% if first_id == '' %}
+    <div style="text-align:center;"><h1 class="errorlist">請搜尋，並指定起始節點 或 回溯</h1></div>
+    {% endif %}
     <div class="jumbotron" style="padding-top: 2px; padding-bottom: 2px;">
         <div id="id_main" class="row text-center">
+        </div>
+        <div>
+            <input type="button" class="btn btn-success" value="記錄" onclick="saveData()">
+            <span class="file-input btn btn-primary btn-file">
+                回溯
+                <input type="file" id="callback" accept=".csv" >
+            <span>
         </div>
     </div>
     <div id="id_form" style="display:none; position:absolute; background:white;">
@@ -30,20 +40,13 @@
             </table>
         </div>
     </div>
-    <div style="position:absolute; top:55px; left:0px;">
-            <input type="button" class="btn btn-success" value="記錄" onclick="saveData()">
-            <span class="file-input btn btn-primary btn-file">
-                回溯
-                <input type="file" id="callback" accept=".csv" >
-            <span>
-    </div>
 {% endblock %}
 {% block script %}
     <script src="{% static 'd3/d3.min.js' %}"></script>
     <script src="{% static 'manual/flowChart.js' %}"></script>
-    <script src="{% static 'manual/myScripts.js' %}"></script>
+    <script src="{% static 'manual/issueFlow.js' %}"></script>
     <script>
         var csrf = {name:'csrfmiddlewaretoken', value: '{{ csrf_token }}'};
-        var first_id = {{first_id}};
+        var first_id = {% if first_id %}{{first_id}}{% else %}""{% endif %};
     </script>
 {% endblock %}

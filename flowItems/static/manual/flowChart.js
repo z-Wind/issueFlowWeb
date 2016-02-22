@@ -37,7 +37,7 @@ function flowChart(selector, width, height, cr) {
         .attr("width", width)
         .attr("height", height);
 
-
+    // for force 定時更新
     function tick() {
         var link = container.selectAll(".link");
         var gnode = container.selectAll('g.gnode');
@@ -60,35 +60,36 @@ function flowChart(selector, width, height, cr) {
             .attr("y2", function(d) {
                 return d.target.y;
             });
-
+        /*
         gnode.attr("cx", function(d) {
                 return d.x;
             })
             .attr("cy", function(d) {
                 return d.y;
-            });
-
-        /*
-        node.attr("cx", function(d) { return d.x; })
-            .attr("cy", function(d) { return d.y; });
-
-        label.attr("x", function(d) { return d.x; })
-              .attr("y", function(d) { return d.y; });*/
+            });*/
     }
 
+    // click gnode
     function g_click(d) {
         if (d3.event.altKey) {
             d3.select(this).selectAll('circle').classed("fixed", d.fixed = !d.fixed);
         }
     }
 
+    // drag gnode
     function g_dragstart(d) {
+        // 防止 zoom 的拖曳
         d3.event.sourceEvent.stopPropagation();
+
         container.selectAll('.gnode').selectAll('.node').classed("focus", false);
         d3.select(this).selectAll('.node').classed("focus", true);
     }
 
+    // mouse over gnode
+    var alpha;
     function g_mouseover(d) {
+        alpha = force.alpha();
+        force.stop();
         container.selectAll('.gnode').style("opacity", 1).selectAll('.node').classed("highlight", true);
         container.selectAll('.link').style("opacity", 1).classed("highlight", true);
 
@@ -114,26 +115,38 @@ function flowChart(selector, width, height, cr) {
             .selectAll('.node')
             .classed("highlight", false);
         nodelinked.clear();
+
     }
 
+    // mouse out gnode
     function g_mouseout(d) {
         container.selectAll('.gnode').style("opacity", 1).selectAll('.node').classed("highlight", false);
         container.selectAll('.link').style("opacity", 1).classed("highlight", false);
+        if(alpha !== 0)
+        {
+            force.resume();
+        }
     }
 
+    // for zoom
     function zoom() {
         container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
     }
 
+    // 畫圖
     this.drawGraph = function(datasets) {
         force.stop();
-        for(var key in datasets)
-        {
+        for (var key in datasets) {
             this.additem(datasets[key]);
         }
         force.start();
+        container.selectAll('g.gnode').selectAll('.node')
+            .classed("hasChild", function(d) {
+                return (d.itemNext_n - d.weight) > 0;
+            });
     };
 
+    // 加入節點
     this.additem = function(dataset) {
         var i, j;
 
@@ -164,8 +177,7 @@ function flowChart(selector, width, height, cr) {
             }
         }
 
-        if(dataset.links.length === 0 && dataset.nodes.length === 0)
-        {
+        if (dataset.links.length === 0 && dataset.nodes.length === 0) {
             return;
         }
 
@@ -208,12 +220,6 @@ function flowChart(selector, width, height, cr) {
             .attr("gid", function(d) {
                 return d.id;
             })
-            .attr("title", function(d) {
-                return d.ph;
-            })
-            .attr("alt", function(d) {
-                return d.ph;
-            })
             .call(g_dragListener)
             .on("click", g_click)
             .on("mouseover", g_mouseover)
@@ -221,41 +227,51 @@ function flowChart(selector, width, height, cr) {
         gnodeData.exit().remove();
 
         var node = gnode.append("circle")
-                        .attr("class", "node")
-                        .attr("r", this.cr);
+            .attr("r", this.cr)
+            .classed("node", true);
 
-        var min_n = 8;
-        var max_n = 20;
-        var showPixel = 11;
+        var min_n = 3*3;
+        var tcr = this.cr;
         var label = gnode.append("text")
-                        .text(function(d) {
-                            return d.ph.slice(0, max_n);
-                        })
-                        .attr({
-                            'text-anchor': 'middle', //文字置中
-                            'class': 'text',
-                        })
-                        .attr('font-size', function(d) {
-                            if (d.ph.length < min_n)
-                            {
-                                return showPixel + 'px';
-                            } else if (d.ph.length < max_n) {
-                                return showPixel * min_n / d.ph.length  + 'px';
-                            } else {
-                                return showPixel * min_n /max_n  + 'px';
-                            }
-                        });
+            .text(function(d) {
+                var str = encodeURIComponent(d.ph);
+                str = str.replace(/%[A-F\d]{2}/g, 'U');
+                if(str.length > min_n)
+                {
+                    d3.select(this).attr('textLength', tcr*2-5);
+                    d3.select(this).attr('lengthAdjust', "spacingAndGlyphs");
+                }
+                return d.ph;
+            })
+            .attr({
+                'text-anchor': 'middle', //文字置中
+                'class': 'text',
+            });
+
 
         var title = gnode.append('title')
-                        .text(function(d) {
-                            return d.ph;
-                        });
+            .text(function(d) {
+                return d.ph;
+            });
+
     };
 
-    this.clear = function()
-    {
-        nodes.splice(0,nodes.length);
-        links.splice(0,links.length);
-        this.additem({"nodes": [], "links": []});
+    this.clear = function() {
+        nodes.splice(0, nodes.length);
+        links.splice(0, links.length);
+
+        // 需清掉，以免影響 weight
+        container.selectAll(".link")
+            .data(force.links(), function(d) {
+                return Math.min(d.source.id, d.target.id) + "-" + Math.max(d.source.id, d.target.id);
+            }).exit().remove();
+
+        container.selectAll('g.gnode')
+            .data(force.nodes(), function(d) {
+                return d.id;
+            }).exit().remove();
+    };
+
+    this.fixeditems = function(dataset) {
     };
 }

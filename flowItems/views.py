@@ -5,12 +5,14 @@ from django.shortcuts import redirect
 from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
-from django.core import serializers
+from django.db.models import Q
 
 # Create your views here.
 from .models import *
 from .forms import *
 import json
+import functools
+import operator
 
 # global variable
 alldatas = {'name': None, 'data': []}
@@ -43,7 +45,9 @@ def objsInquiryFilter(objs, inquiry):
     if inquiry.is_valid():
         ph = inquiry.cleaned_data['ph'].strip()
         if ph:  # contain str
-            objs = objs.filter(ph__icontains=ph)
+            queryargs = [functools.reduce(operator.__and__,
+                         [Q(ph__icontains=c) for c in p]) for p in ph.split()]
+            objs = objs.filter(functools.reduce(operator.__or__, queryargs))
 
     return objs
 
@@ -65,7 +69,15 @@ def getRowDatas(obj, tableHeads):
 # Create your views here.
 def issueFlow(request, first_id):
     title = 'IssueFlow'
+    nbar_now = 'flowItemissueFlow'
     f = ItemForm()
+    
+    if(first_id):
+        item = Item.objects.get(pk=first_id)
+        if item.s_count < 2147483647:
+            item.s_count += 1
+            item.save()
+
     return render(request, 'issueFlow.html', locals())
 
 
@@ -110,17 +122,18 @@ def newNode(request):
 
     if 'ok' in request.POST:
         f = ItemForm(request.POST)
+
+        if f.is_valid():
+            ph = f.cleaned_data['ph']
+
+            item, created = Item.objects.get_or_create(ph=ph)
+
+            return redirect(reverse("flowItemissueFlow",
+                                    kwargs={'first_id': item.id}))
+    elif 'ok' in request.GET:
+        f = ItemForm(request.GET)
     else:
         f = ItemForm()
-
-    if f.is_valid():
-        print(1234)
-        ph = f.cleaned_data['ph']
-
-        item, created = Item.objects.get_or_create(ph=ph)
-
-        return redirect(reverse("flowItemissueFlow",
-                                kwargs={'first_id': item.id}))
 
     return render(request, 'newNode.html', locals())
 
@@ -137,14 +150,20 @@ def getItems(request):
                         id: {
                             'id': item.id,
                             'ph': item.ph,
+                            'itemNext_n': item.itemNexts.all().count(),
                             'relatedTags': [{f.name: getattr(t, f.name)
                                              for f in Tag._meta.fields}
                                             for t in item.relatedTags.all()],
                             'itemNext': [{f.name: getattr(i, f.name)
                                           for f in Item._meta.fields}
                                          for i in item.itemNexts.all()],
-                             }
+                        }
                     })
+                for i in dic[id]['itemNext']:
+                    i.update(
+                        {'itemNext_n': Item.objects
+                                           .get(pk=i['id']).itemNexts
+                                           .all().count()})
         except Item.DoesNotExist:
             dic = {'error': 'Not Found'}
     return JsonResponse(dic)
@@ -165,9 +184,11 @@ def createItems(request):
             for obj in relatedTags:
                 item.relatedTags.add(obj)
             for obj in itemNexts:
-                item.itemNexts.add(obj)
+                if(obj.id != item.id):
+                    item.itemNexts.add(obj)
 
-            pre_item.itemNexts.add(item)
+            if(pre_item.id != item.id):
+                pre_item.itemNexts.add(item)
 
             dic = {'id': item.id, 'ph': item.ph}
         else:

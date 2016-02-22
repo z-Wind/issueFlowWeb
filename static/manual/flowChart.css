@@ -1,35 +1,49 @@
-/*node css*/
+.overlay {
+  fill: none;
+  pointer-events: all;
+}
+
 .link {
   stroke: #000;
   stroke-width: 1.5px;
 }
 
-.node {
+.gnode .node {
   cursor: pointer;
   fill: #ccc;
   stroke: #000;
   stroke-width: 1.5px;
 }
 
-.node.fixed {
-  fill: rgb(128, 128, 128);
-}
-
-.highlight {
+.gnode .highlight, .link.highlight{
   stroke: #00f;
-}
-
-.focus {
-  stroke: yellow;
   stroke-width: 2px;
 }
 
-.text {
+.gnode .focus {
+  stroke: yellow;
+  stroke-width: 4px;
+}
+
+.gnode .focus.highlight{
+  stroke: #00f;
+  fill: yellow;
+  stroke-width: 2px;
+}
+
+.gnode .text {
   font-family: sans-serif;
   pointer-events: none;
 }
 
-.overlay {
-  fill: none;
-  pointer-events: all;
+.gnode .hasChild {
+    fill: rgb(123, 200, 138);
+}
+
+.gnode .fixed {
+    fill: rgb(128, 128, 128);
+}
+
+.gnode .fixed.hasChild {
+    fill: rgb(97, 143, 106);
 }

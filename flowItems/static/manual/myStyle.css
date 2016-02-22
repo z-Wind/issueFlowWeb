@@ -3,6 +3,7 @@ body {
     padding-top: 50px;
 }
 
+/* error 顏色 */
 .errorlist {
     color: red;
 }
