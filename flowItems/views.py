@@ -45,8 +45,8 @@ def objsInquiryFilter(objs, inquiry):
     if inquiry.is_valid():
         ph = inquiry.cleaned_data['ph'].strip()
         if ph:  # contain str
-            queryargs = [functools.reduce(operator.__and__,
-                         [Q(ph__icontains=c) for c in p]) for p in ph.split()]
+            queryargs = [Q(ph__iregex='.*' + '.*'.join(p) + '.*')
+                         for p in ph.split()]
             objs = objs.filter(functools.reduce(operator.__or__, queryargs))
 
     return objs
@@ -71,7 +71,7 @@ def issueFlow(request, first_id):
     title = 'IssueFlow'
     nbar_now = 'flowItemissueFlow'
     f = ItemForm()
-    
+
     if(first_id):
         item = Item.objects.get(pk=first_id)
         if item.s_count < 2147483647:
@@ -177,21 +177,49 @@ def createItems(request):
             ph = f.cleaned_data['ph']
             relatedTags = f.cleaned_data.get('relatedTags', [])
             itemNexts = f.cleaned_data.get('itemNexts', [])
-            pre_item = f.cleaned_data['pre_item']
+            now_item = f.cleaned_data['now_item']
 
-            item, created = Item.objects.get_or_create(ph=ph)
+            if(ph == now_item.ph):
+                dic = {'id': 0, 'errors': {'now_item': ['same name']}}
+            else:
+                insertItem, created = Item.objects.get_or_create(ph=ph)
 
-            for obj in relatedTags:
-                item.relatedTags.add(obj)
-            for obj in itemNexts:
-                if(obj.id != item.id):
-                    item.itemNexts.add(obj)
+                for obj in relatedTags:
+                    insertItem.relatedTags.add(obj)
+                for obj in itemNexts:
+                    if(obj.id != insertItem.id):
+                        insertItem.itemNexts.add(obj)
 
-            if(pre_item.id != item.id):
-                pre_item.itemNexts.add(item)
+                if(now_item.id != insertItem.id):
+                    now_item.itemNexts.add(insertItem)
 
-            dic = {'id': item.id, 'ph': item.ph}
+                dic = {'id': insertItem.id, 'ph': insertItem.ph}
         else:
             dic = {'id': 0,
                    'errors': f.errors, }
+    return JsonResponse(dic)
+
+
+def renameItems(request):
+    dic = {"error": "Error Contact"}
+    if request.is_ajax():
+        f = ItemForm(request.POST)
+        if f.is_valid():
+            ph = f.cleaned_data['ph']
+            now_item = f.cleaned_data['now_item']
+
+            try:
+                Item.objects.get(ph=ph)
+                dic = {'id': 0, 'errors': {'now_item': ['Exist']}}
+            except Item.DoesNotExist:
+                now_item.ph = ph
+                now_item.save()
+                dic = {'id': now_item.id, 'ph': now_item.ph}
+            except Item.MultipleObjectsReturned:
+                dic = {'id': 0, 'errors': {'now_item': ['Duplicated']}}
+        else:
+            dic = {'id': 0,
+                   'errors': f.errors, }
+
+        print(dic)
     return JsonResponse(dic)

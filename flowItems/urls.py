@@ -8,4 +8,5 @@ urlpatterns = [
     url(r'^newNode/$', newNode, name="flowItemsNewNode"),
     url(r'^getItems/$', getItems, name="flowItemsGetItems"),
     url(r'^createItems/$', createItems, name="flowItemsCreateItems"),
+    url(r'^renameItems/$', renameItems, name="flowItemsRenameItems"),
 ]

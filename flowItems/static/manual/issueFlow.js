@@ -73,7 +73,7 @@ function itemShowSVG(items) {
         $('#id_main svg .gnode').each(function() {
             for (var key in items) {
                 if (key == $(this).attr('gid')) {
-                    $(this).children('.node').addClass('fixed');
+                    $(this).children('.node').addClass('loaded');
                 }
             }
 
@@ -96,6 +96,10 @@ function getItems(id_list) {
 // 記錄狀態
 function saveData() {
     var csv = [];
+
+    $('#id_main svg .loaded').each(function() {
+        csv.push($(this).parent().attr('gid'));
+    });
 
     $('#id_main svg .fixed').each(function() {
         csv.push($(this).parent().attr('gid'));
@@ -134,41 +138,55 @@ $(document).ready(function() {
                 'top': 55, // event.pageY + 10,
                 'left': event.pageX + 10
             });
-            var p_id = $(this).attr("gid");
-            $('#id_pre_item option').attr('selected', false);
-            $('#id_pre_item option[value="' + p_id + '"]').attr('selected', 'selected');
-            $('#id_pre_item').val(p_id).change();
-            $('#id_form').slideDown('slow');
+            expandForm($('#id_form'), $('#id_node_form'), $('#id_now_item'), $(this).attr("gid"));
         }
     });
 
-    // 收起新增 item 表單
-    function collapseForm() {
-        $('#id_form').slideUp('middle');
-        $("#id_input_form")[0].reset();
-        $('#id_itemListSel option').remove();
+    // 收起表單
+    function collapseForm($div, $form, $itemList) {
+        $div.slideUp('middle');
+        $('#id_form .errorlist').empty();
+        $form[0].reset();
+        $itemList.children('option').remove();
+    }
+
+    // 展開表單
+    function expandForm($div, $form, $now_item, p_id) {
+        $('#id_form .errorlist').empty();
+        $now_item.children('option').attr('selected', false);
+        $now_item.children('option[value="' + p_id + '"]').attr('selected', 'selected');
+        $now_item.val(p_id).change();
+        $div.slideDown('middle');
     }
 
     // 取消提交 item 表單
-    $('#id_input_form > input:reset').click(function() {
-        collapseForm();
+    $('#id_node_form > input:reset[value="取消"]').click(function() {
+        collapseForm($('#id_form'), $('#id_node_form'), $('#id_itemListSel'));
     });
 
     // 提交 item 表單
-    $('#id_input_form > input:button').click(function() {
-        $('#id_pre_item').prop('disabled', false);
+    $('#id_node_form > input:button').click(function() {
+        $('#id_now_item').prop('disabled', false);
         $('#id_ph').val($.trim($('#id_ph').val()));
-        var form_data = $('#id_input_form').serializeArray();
+        var form_data = $('#id_node_form').serializeArray();
+        var $form_button = $(this);
         form_data.push(csrf);
+        /*if ($form_button.val() === "更名")
+        {
+            var now_id = $('#id_now_item option:selected').val();
+            form_data.push({name:'now_id', value: now_id});
+        }*/
         $.ajax({
-            url: "/createItems/",
+            url: ($form_button.val() === "新增")? "/createItems/":
+                 ($form_button.val() === "更名")? "/renameItems/": "",
             data: form_data,
             success: function(data) {
-                $('#id_form .errorlist').empty();
                 if (data.id === 0) {
+                    $('#id_form .errorlist').empty();
                     var str = '';
                     var lists = {
-                        'ph': '現象'
+                        'ph': '現象',
+                        'now_item': '目前節點'
                     };
                     for (var k in data.errors) {
                         for (var i = 0; i < data.errors[k].length; i++) {
@@ -177,24 +195,36 @@ $(document).ready(function() {
                     }
 
                     $('#id_form > div:first-child').append(str);
-                } else {
+                } else if ($form_button.val() === "新增") {
                     getItems([data.id]);
-                    var op = $("#id_pre_item").find('option[value="' + data.id + '"]');
+                    var op = $("#id_now_item").find('option[value="' + data.id + '"]');
                     if (op.length === 0) {
-                        $('#id_pre_item').append($("<option></option>").attr("value", data.id).text(data.ph));
+                        $('#id_now_item').append($("<option></option>").attr("value", data.id).text(data.ph));
                     }
-                    collapseForm();
+                    collapseForm($('#id_form'), $('#id_node_form'), $('#id_itemListSel'));
+                } else if ($form_button.val() === "更名") {
+                    getItems([data.id]);
+                    $('#id_now_item option[value="' + data.id + '"]').text(data.ph);
+                    collapseForm($('#id_form'), $('#id_node_form'), $('#id_itemListSel'));
                 }
             },
             // 發送請求之前可在此修改 XMLHttpRequest 物件
             // 如添加 header 等，你可以在此函式中 return flase 取消 Ajax request。
-            beforeSend: function(XMLHttpRequest) {
+            beforeSend: function(XMLHttpRequest, settings) {
                 // the options for this ajax request
-                return checkForm("#id_input_form", ['pre_item', 'ph']);
+                if(settings.url === "")
+                {
+                    alert("no url");
+                    return false;
+                }
+                else
+                {
+                    return checkForm("#id_node_form", ['now_item', 'ph'], $form_button.val() + "節點");
+                }
             },
             // 請求完成時執行的函式(不論結果是success或error)。
             complete: function(XMLHttpRequest, textStatus) {
-                $('#id_pre_item').attr('disabled', true);
+                $('#id_now_item').attr('disabled', true);
             },
             type: "POST", // 預設為 GET
             dataType: "json" // 無指定自動選擇
@@ -204,14 +234,14 @@ $(document).ready(function() {
     // 更新列表
     $('#id_ph').keyup(function() {
         var typing = $.trim($('#id_ph').val());
-        updatelist('#id_pre_item', '#id_itemListSel', typing);
+        updatelist('#id_now_item', '#id_itemListSel', typing);
     });
 
     // 將選中的值放到表單中
     $('#id_itemListSel').on('click', 'option', function() {
         var selText = $(this).text();
         $('#id_ph').val(selText);
-        updatelist('#id_pre_item', '#id_itemListSel', selText);
+        updatelist('#id_now_item', '#id_itemListSel', selText);
     });
 
     // 回溯讀檔用
@@ -221,7 +251,7 @@ $(document).ready(function() {
         // for chrome on change doesn't work
         $(this).val("");
         $('.container > div > h1.errorlist').remove();
-        
+
         var $body = (window.opera) ? (document.compatMode == "CSS1Compat" ? $('html') : $('body')) : $('html,body');
 		$body.animate({
 			scrollTop: 0

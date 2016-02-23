@@ -51,8 +51,13 @@
 }
 
 /* fixed */
+.gnode .loaded {
+    fill: #00ffff;
+}
+
+/* fixed */
 .gnode .fixed {
-    fill: #66FF66;
+    fill: #11FF11;
 }
 
 .gnode .fixed.hasChild {

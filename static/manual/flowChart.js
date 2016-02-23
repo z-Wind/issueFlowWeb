@@ -9,7 +9,7 @@ function flowChart(selector, width, height, cr) {
     var force = d3.layout.force()
         .nodes(nodes)
         .links(links)
-        .charge(-1000)
+        .charge(-500)
         .linkDistance(this.cr * 3)
         .size([this.width, this.height]);
     force.on("tick", tick);
@@ -73,7 +73,9 @@ function flowChart(selector, width, height, cr) {
     function g_click(d) {
         if (d3.event.altKey) {
             var dcircleSel = d3.select(this).selectAll('circle');
+            dcircleSel.classed("loaded", false);
             dcircleSel.classed("fixed", !dcircleSel.classed("fixed"));
+            var a = dcircleSel.classed("fixed");
             d.fixed = dcircleSel.classed("fixed");
         }
     }
@@ -126,12 +128,12 @@ function flowChart(selector, width, height, cr) {
         container.selectAll('.link').style("opacity", 1).classed("highlight", false);
         if(alpha !== 0)
         {
-            force.resume();
+            force.start();
         }
     }
 
-    var tcr = this.cr;
     // for zoom
+    var tcr = this.cr;
     function zoom() {
         container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
 
@@ -155,7 +157,7 @@ function flowChart(selector, width, height, cr) {
             d3.select(textObj).attr('textLength', tl);
             d3.select(textObj).attr('lengthAdjust', "spacingAndGlyphs");
 
-            var uCount = (strF.match(/\^\$/g) || []).length/2;
+            var uCount = (strF.slice(0, min_n).match(/\^\$/g) || []).length;
 
             if(strF[min_n] === '$' && strF[min_n-1] === '^')
                 return str.slice(0, Math.max(1, min_n-1-uCount)) + "...";
@@ -163,6 +165,7 @@ function flowChart(selector, width, height, cr) {
                 return str.slice(0, Math.max(1, min_n-uCount)) + "...";
             }
         }
+        // 合適的值，以免變大後，字超過圓圈
         else if (strF.length >= 8){
             d3.select(textObj).attr('textLength', tl);
             d3.select(textObj).attr('lengthAdjust', "spacingAndGlyphs");
@@ -189,14 +192,23 @@ function flowChart(selector, width, height, cr) {
 
     // 加入節點
     this.additem = function(dataset) {
-        var i, j;
+        var i, j, k;
+        var tcr = this.cr;
+        var update = false;
 
-        // check same
-        for (i = 0; i < dataset.nodes.length; i++) {
-            for (j = 0; j < nodes.length; j++) {
-                if (dataset.nodes[i].id === nodes[j].id) {
-                    dataset.nodes.splice(i, 1);
-                    i--;
+        // check same and update
+        for (i = 0; i < nodes.length; i++) {
+            for (j = 0; j < dataset.nodes.length; j++) {
+                if (nodes[i].id === dataset.nodes[j].id) {
+                    for (k in dataset.nodes[j])
+                    {
+                        if(nodes[i][k] !== dataset.nodes[j][k])
+                        {
+                            nodes[i][k] = dataset.nodes[j][k];
+                            update = true;
+                        }
+                    }
+                    dataset.nodes.splice(j, 1);
                     break;
                 }
             }
@@ -216,6 +228,24 @@ function flowChart(selector, width, height, cr) {
                     break;
                 }
             }
+        }
+
+        // update text
+        if(update)
+        {
+            container.selectAll('g.gnode')
+                     .selectAll("text")
+                     .text(function(d) {
+                         //一個中文字抵兩個英文字
+                         var min_n = 4*2;
+                         return cutString(this, d.ph, min_n, tcr*2-6);
+                     });
+
+             container.selectAll('g.gnode')
+                      .selectAll("title")
+                      .text(function(d) {
+                          return d.ph;
+                      });
         }
 
         if (dataset.links.length === 0 && dataset.nodes.length === 0) {
@@ -271,7 +301,6 @@ function flowChart(selector, width, height, cr) {
             .attr("r", this.cr)
             .classed("node", true);
 
-        var tcr = this.cr;
         var label = gnode.append("text")
             .text(function(d) {
                 //一個中文字抵兩個英文字
@@ -288,7 +317,6 @@ function flowChart(selector, width, height, cr) {
             .text(function(d) {
                 return d.ph;
             });
-
     };
 
     this.clear = function() {

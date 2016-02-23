@@ -1,19 +1,24 @@
 //建立列表
 function updatelist(sourceSel, targetSel, str) {
-    str = str.toLowerCase();
+    //str = str.toLowerCase();
     $(targetSel + ' option').remove();
     $(sourceSel + ' option').each(function() {
-        var text = $(this).text().toLowerCase();
-        if (text.indexOf(str) != -1) {
+        //var text = $(this).text().toLowerCase();
+        /*if (text.indexOf(str) != -1) {
             $(targetSel).append($(this).clone());
+        }*/
+        var text = $(this).text();
+        pattern = new RegExp(".*" + str.split("").join(".*") + ".*", "i");
+        if (pattern.exec(text)) {
+            $(targetSel).append($(this).clone().attr('selected', false));
         }
     });
 }
 
 //確認表單內容
-function checkForm(targetSel, list) {
+function checkForm(targetSel, list, title) {
     var dataArray = $(targetSel).serializeArray();
-    var str = "";
+    var str = title + "\n" + "====================\n";
     for (var i = 0; i < list.length; i++) {
         if ($("#id_" + list[i]).is("select"))
             str = str + $("#id_" + list[i] + " option:selected").text() + "\n";
@@ -24,7 +29,7 @@ function checkForm(targetSel, list) {
     if (confirm(str + '\n是否確認送出？')) {
         return true;
     } else {
-        $('#id_pre_item').attr('disabled', true);
+        $('#id_' + list[0]).attr('disabled', true);
         return false;
     }
 }

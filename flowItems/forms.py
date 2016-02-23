@@ -13,12 +13,12 @@ class GoodInquiryForm(forms.Form):
 
 
 class ItemForm(forms.ModelForm):
-    pre_item = forms.ModelChoiceField(
+    now_item = forms.ModelChoiceField(
             required=False,
             queryset=Item.objects.all(),
-            label='上一步',
+            label='目前節點',
             widget=forms.Select(attrs={'disabled': 'disabled'}))
 
     class Meta:
         model = Item
-        fields = ['pre_item', 'ph']
+        fields = ['now_item', 'ph']
