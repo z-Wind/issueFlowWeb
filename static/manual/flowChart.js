@@ -6,6 +6,8 @@ function flowChart(selector, width, height, cr) {
     var nodes = [],
         links = [];
 
+    var color = d3.scale.category10();
+
     var force = d3.layout.force()
         .nodes(nodes)
         .links(links)
@@ -28,6 +30,7 @@ function flowChart(selector, width, height, cr) {
         .attr("height", this.height)
         .style('cursor', 'move')
         .style('border', '#50506f 5px solid')
+        .style('background-color', '#000')
         .call(zoomListener).on("dblclick.zoom", null);
 
     var container = svg.append("g");
@@ -85,8 +88,22 @@ function flowChart(selector, width, height, cr) {
         // 防止 zoom 的拖曳
         d3.event.sourceEvent.stopPropagation();
 
-        container.selectAll('.gnode').selectAll('.node').classed("focus", false);
-        d3.select(this).selectAll('.node').classed("focus", true);
+        var now_r = d3.select(this).selectAll('.node').classed("focus", true).attr('r');
+        if(now_r == tcr)
+        {
+            container.selectAll('.gnode > .node')
+                        .classed("focus", false)
+                        .transition()
+                        .duration(200)
+                        .ease('linear')
+                        .attr('r', tcr);
+            d3.select(this).selectAll('.node')
+                           .classed("focus", true)
+                           .transition()
+                           .duration(200)
+                           .ease('linear')
+                           .attr('r', tcr*1.5);
+       }
     }
 
     // mouse over gnode
@@ -98,6 +115,7 @@ function flowChart(selector, width, height, cr) {
         container.selectAll('.link').style("opacity", 1).classed("highlight", true);
 
         var nodelinked = new Set();
+        nodelinked.add(d.id);
         container.selectAll('.link')
             .filter(function(o) {
                 var checked = true;
@@ -108,14 +126,14 @@ function flowChart(selector, width, height, cr) {
                 }
                 return checked;
             })
-            .style("opacity", 0.2)
+            .style("opacity", 0.1)
             .classed("highlight", false);
 
         container.selectAll('.gnode')
             .filter(function(o) {
                 return !nodelinked.has(o.id);
             })
-            .style("opacity", 0.2)
+            .style("opacity", 0.1)
             .selectAll('.node')
             .classed("highlight", false);
         nodelinked.clear();
@@ -137,11 +155,10 @@ function flowChart(selector, width, height, cr) {
     function zoom() {
         container.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
 
-        container.selectAll(".gnode > text")
-            .text(function(d) {
-                //一個中文字抵兩個英文字
+        container.selectAll("g.gnode > text > tspan")
+            .text(function(d){
                 var min_n = 4*2;
-                return cutString(this, d.ph, min_n*zoomListener.scale(), tcr*2-6);
+                return cutString(this, d, min_n*zoomListener.scale(), tcr*2+15);
             });
     }
 
@@ -149,8 +166,10 @@ function flowChart(selector, width, height, cr) {
     function cutString(textObj, str, min_n, tl)
     {
         min_n = Math.round(min_n);
-        var strC = encodeURIComponent(str).replace(/%[A-F\d]{2}%[A-F\d]{2}%[A-F\d]{2}/g, '^$');
-        var strF = strC.replace(/%[A-F\d]{2}/g, 'S');
+        textObj = textObj.parentNode;
+        var strS = str.replace(/ /g, 'S');
+        var strC = encodeURIComponent(strS).replace(/%[A-F\d]{2}%[A-F\d]{2}%[A-F\d]{2}/g, '^$');
+        var strF = strC.replace(/%[A-F\d]{2}/g, 'Z');
 
         if(strF.length > min_n)
         {
@@ -186,7 +205,7 @@ function flowChart(selector, width, height, cr) {
         force.start();
         container.selectAll('g.gnode').selectAll('.node')
             .classed("hasChild", function(d) {
-                return (d.itemNext_n - d.weight) > 0;
+                return (d.related_n - d.weight) > 0;
             });
     };
 
@@ -233,18 +252,29 @@ function flowChart(selector, width, height, cr) {
         // update text
         if(update)
         {
-            container.selectAll('g.gnode')
-                     .selectAll("text")
-                     .text(function(d) {
-                         //一個中文字抵兩個英文字
-                         var min_n = 4*2;
-                         return cutString(this, d.ph, min_n, tcr*2-6);
-                     });
 
-             container.selectAll('g.gnode')
-                      .selectAll("title")
+             container.selectAll("g.gnode > text")
+                 .selectAll("tspan")
+                 .data(function(d){ return [d.body.name, d.describe];})
+                 .text(function(d){
+                     var min_n = 4*2;
+                     return cutString(this, d, min_n, tcr*2+15);
+                 });
+
+             container.selectAll('g.gnode > title')
                       .text(function(d) {
-                          return d.ph;
+                          return d.body.name + "\n" + d.describe;
+                      });
+
+             container.selectAll('g.gnode > circle')
+                  .style('fill', function(d){ return color(d.body.id);});
+
+             container.selectAll("g")
+                      .attr("gid", function(d) {
+                          return d.id;
+                      })
+                      .attr("gbid", function(d) {
+                          return d.body.id;
                       });
         }
 
@@ -291,6 +321,9 @@ function flowChart(selector, width, height, cr) {
             .attr("gid", function(d) {
                 return d.id;
             })
+            .attr("gbid", function(d) {
+                return d.body.id;
+            })
             .call(g_dragListener)
             .on("click", g_click)
             .on("mouseover", g_mouseover)
@@ -299,13 +332,20 @@ function flowChart(selector, width, height, cr) {
 
         var node = gnode.append("circle")
             .attr("r", this.cr)
-            .classed("node", true);
+            .classed("node", true)
+            .style('fill', function(d){ return color(d.body.id);});
 
         var label = gnode.append("text")
-            .text(function(d) {
-                //一個中文字抵兩個英文字
+            .selectAll("tspan")
+            .data(function(d){ return [d.body.name, d.describe];})
+            .enter()
+            .append("tspan")
+            .attr("x", 0)
+            .attr("y", -tcr/4)
+            .attr("dy", function(d, i){ return i + "em";})
+            .text(function(d){
                 var min_n = 4*2;
-                return cutString(this, d.ph, min_n, tcr*2-6);
+                return cutString(this,  d, min_n, tcr*2+15);
             })
             .attr({
                 'text-anchor': 'middle', //文字置中
@@ -315,7 +355,7 @@ function flowChart(selector, width, height, cr) {
 
         var title = gnode.append('title')
             .text(function(d) {
-                return d.ph;
+                return d.body.name + "\n" + d.describe;
             });
     };
 

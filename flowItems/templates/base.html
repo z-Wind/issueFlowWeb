@@ -50,18 +50,18 @@
                         {% endif %}
                         {% if nbar_now == 'flowItemsNewNode' %}
                         <li class="active">
-                            <a href="{% url 'flowItemsNewNode' %}">新增</a>
+                            <a href="{% url 'flowItemsNewEventWeb' %}">新增</a>
                         </li>
                         {% endif %}
-                        <li {% if nbar_now == 'flowItemissueFlow' %}class="active"{% endif %}>
-                            <a href="{% url 'flowItemissueFlow' first_id='' %}">網絡圖</a>
+                        <li {% if nbar_now == 'flowItemIssueFlow' %}class="active"{% endif %}>
+                            <a href="{% url 'flowItemIssueFlow' first_id='' %}">網絡圖</a>
                         </li>
                     </ul>
                     <form class="navbar-form" action="/search/">
                         <div class="form-group" style="display:inline;">
                             <div class="input-group" style="display:table;">
                                 <span class="input-group-addon" style="width:1%;"><span class="glyphicon glyphicon-search"></span></span>
-                                <input class="form-control" name="ph" placeholder="Search Node (space = or, empty = all)" autocomplete="off" autofocus="autofocus" type="text">
+                                {{inquiry.searchStr}}
                             </div>
                             <input name="ok" value="yes" type="hidden">
                         </div>

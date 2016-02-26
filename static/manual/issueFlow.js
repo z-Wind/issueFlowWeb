@@ -32,18 +32,20 @@ function itemToD3JSon(items) {
         var item = items[key];
         var major = {
             "id": item.id,
-            "ph": item.ph,
-            "itemNext_n": item.itemNext_n
+            "body": item.body,
+            "describe": item.describe,
+            "related_n": item.related_n
         };
 
         if (!checkItemSame(dataset.nodes, major.id))
             dataset.nodes.push(major);
 
-        for (i = 0; i < item.itemNext.length; i++) {
+        for (i = 0; i < item.related.length; i++) {
             var next = {
-                "id": item.itemNext[i].id,
-                "ph": item.itemNext[i].ph,
-                "itemNext_n": item.itemNext[i].itemNext_n
+                "id": item.related[i].id,
+                "body": item.related[i].body,
+                "describe": item.related[i].describe,
+                "related_n": item.related[i].related_n
             };
             if (!checkItemSame(dataset.nodes, next.id))
                 dataset.nodes.push(next);
@@ -85,7 +87,7 @@ function itemShowSVG(items) {
 // 得到 item data
 function getItems(id_list) {
     var returnValue = {};
-    $.getJSON("/getItems/", {
+    $.getJSON(url_get, {
             id: id_list
         },
         function(jdata) {
@@ -124,88 +126,171 @@ $(document).ready(function() {
     {
         getItems([first_id]);
     }
+    $('#id_now_event_body').css('color', 'black');
+    $('#id_now_event').css('color', 'black');
+    $('#id_bodyName').css('color', 'black');
+    $('#id_describe').css('color', 'black');
+    $('#id_eventListSel').css('color', 'black');
+    $('#id_bodyListSel').css('color', 'black');
 
     //顯示接下來的節點
     $('#id_main').on('dblclick', '.gnode', function() {
         getItems([$(this).attr("gid")]);
     });
 
+
     // 新增連接 ITEM
-    $('#id_main').on('click', '.gnode', function(event) {
-        if (event.ctrlKey) {
+    $('#id_main').on('contextmenu', '.gnode', function(event) {
+        if($('#id_form').css('display') !== 'none') {
+            $('#id_form').animate({
+                //直接放置最上面
+                'top':  $('svg').offset().top + 6,
+                'left': Math.min(event.pageX, $('svg').offset().left+ $('svg').width()-$('#id_form').width())
+            }, 500, function(){
+                                 // Animation complete.
+                               });
+        }
+        else {
             $('#id_form').css({
                 //直接放置最上面
-                'top': 55, // event.pageY + 10,
-                'left': event.pageX + 10
+                'top':  $('svg').offset().top + 6,
+                'left': Math.min(event.pageX, $('svg').offset().left+ $('svg').width()-$('#id_form').width())
             });
-            expandForm($('#id_form'), $('#id_node_form'), $('#id_now_item'), $(this).attr("gid"));
         }
+        expandForm($('#id_form'),
+                   $('#id_node_form'),
+                   {
+                       '#id_now_event': $(this).attr("gid"),
+                       '#id_now_event_body': $(this).attr("gbid"),
+                   });
+
+       $('#id_bodyName').val($('#id_now_event_body option:selected').text());
+       scrollTo(0);
+       // 禁止右鍵
+       return false;
     });
+    // 新增連接 ITEM ctrl
+    /*$('#id_main').on('click', '.gnode', function(event) {
+        if (event.ctrlKey) {
+            event.stopPropagation();
+            $('#id_form').css({
+                //直接放置最上面
+                'top':  $('svg').offset().top,//event.pageY - 50,
+                'left': $('svg').offset().left//event.pageX + 20
+            });
+            expandForm($('#id_form'),
+                       $('#id_node_form'),
+                       {
+                           '#id_now_event': $(this).attr("gid"),
+                           '#id_now_event_body': $(this).attr("gbid"),
+                       });
+           $('#id_bodyName').val($('#id_now_event_body option:selected').text());
+           scrollTo(0);
+        }
+    });*/
 
     // 收起表單
-    function collapseForm($div, $form, $itemList) {
+    function collapseForm($div, $form, $selArr) {
         $div.slideUp('middle');
-        $('#id_form .errorlist').empty();
+        $('#id_form .errorlist').remove();
         $form[0].reset();
-        $itemList.children('option').remove();
+        for(var i=0; i<$selArr.length; i++)
+        {
+            var t = $selArr[i];
+            $selArr[i].children('option').remove();
+        }
+        scrollTo(0);
     }
 
     // 展開表單
-    function expandForm($div, $form, $now_item, p_id) {
-        $('#id_form .errorlist').empty();
-        $now_item.children('option').attr('selected', false);
-        $now_item.children('option[value="' + p_id + '"]').attr('selected', 'selected');
-        $now_item.val(p_id).change();
+    function expandForm($div, $form, $selObjs) {
+        $('#id_bodyDiv').hide();
+        $('#id_eventDiv').hide();
+        $('#id_form .errorlist').remove();
+        for(var key in $selObjs)
+        {
+            $(key).children('option').attr('selected', false);
+            $(key).children('option[value="' + $selObjs[key] + '"]').attr('selected', 'selected');
+            $(key).val($selObjs[key]).change();
+        }
         $div.slideDown('middle');
     }
 
     // 取消提交 item 表單
     $('#id_node_form > input:reset[value="取消"]').click(function() {
-        collapseForm($('#id_form'), $('#id_node_form'), $('#id_itemListSel'));
+        collapseForm($('#id_form'), $('#id_node_form'), [$('#id_eventListSel'), $('#id_bodyListSel')]);
+    });
+
+    $('.jumbotron').click(function(event){
+        collapseForm($('#id_form'), $('#id_node_form'), [$('#id_eventListSel'), $('#id_bodyListSel')]);
     });
 
     // 提交 item 表單
     $('#id_node_form > input:button').click(function() {
-        $('#id_now_item').prop('disabled', false);
-        $('#id_ph').val($.trim($('#id_ph').val()));
+        $('#id_now_event').prop('disabled', false);
+        $('#id_now_event_body').prop('disabled', false);
+        $('#id_describe').val($.trim($('#id_describe').val()));
+        $('#id_bodyName').val($.trim($('#id_bodyName').val()));
         var form_data = $('#id_node_form').serializeArray();
         var $form_button = $(this);
         form_data.push(csrf);
-        /*if ($form_button.val() === "更名")
+        /*if ($form_button.val() === "更正")
         {
-            var now_id = $('#id_now_item option:selected').val();
+            var now_id = $('#id_now_event option:selected').val();
             form_data.push({name:'now_id', value: now_id});
         }*/
         $.ajax({
-            url: ($form_button.val() === "新增")? "/createItems/":
-                 ($form_button.val() === "更名")? "/renameItems/": "",
+            url: ($form_button.val() === "新增")? url_create:
+                 ($form_button.val() === "更正")? url_rename: "",
             data: form_data,
             success: function(data) {
+                var op;
                 if (data.id === 0) {
-                    $('#id_form .errorlist').empty();
+                    $('#id_form .errorlist').remove();
                     var str = '';
                     var lists = {
-                        'ph': '現象',
-                        'now_item': '目前節點'
+                        'bodyName': '實體',
+                        'describe': '行為描述',
+                        'now_event': '目前節點',
+                        'now_event_body': '目前實體'
                     };
                     for (var k in data.errors) {
                         for (var i = 0; i < data.errors[k].length; i++) {
-                            str += '<p class="errorlist">' + lists[k] + ' : ' + data.errors[k][i] + '</p>';
+                            str += '<p class="errorlist" style="background-color:white;">' + lists[k] + ' : ' + data.errors[k][i] + '</p>';
                         }
                     }
 
                     $('#id_form > div:first-child').append(str);
                 } else if ($form_button.val() === "新增") {
                     getItems([data.id]);
-                    var op = $("#id_now_item").find('option[value="' + data.id + '"]');
+
+                    op = $("#id_now_event").find('option[value="' + data.id + '"]');
                     if (op.length === 0) {
-                        $('#id_now_item').append($("<option></option>").attr("value", data.id).text(data.ph));
+                        $('#id_now_event').append($("<option></option>").attr("value", data.id).text(data.describe));
+                        $('#id_eventListTemp').append($("<option></option>").attr("value", data.id).prop("title", data.body.name).text(data.describe));
                     }
-                    collapseForm($('#id_form'), $('#id_node_form'), $('#id_itemListSel'));
-                } else if ($form_button.val() === "更名") {
+
+                    op = $("#id_now_event_body").find('option[value="' + data.body.id + '"]');
+                    if (op.length === 0) {
+                        $('#id_now_event_body').append($("<option></option>").attr("value", data.body.id).text(data.body.name));
+                        $('#id_bodyListTemp').append($("<option></option>").attr("value", data.body.id).text(data.body.name));
+                    }
+                    collapseForm($('#id_form'), $('#id_node_form'), [$('#id_eventListSel'), $('#id_bodyListSel')]);
+                } else if ($form_button.val() === "更正") {
                     getItems([data.id]);
-                    $('#id_now_item option[value="' + data.id + '"]').text(data.ph);
-                    collapseForm($('#id_form'), $('#id_node_form'), $('#id_itemListSel'));
+                    $('#id_now_event option[value="' + data.id + '"]').text(data.describe);
+                    $('#id_eventListTemp option[value="' + data.id + '"]').prop("title", data.body.name).text(data.describe);
+
+                    op = $("#id_now_event_body").find('option[value="' + data.body.id + '"]');
+                    if (op.length === 0) {
+                        $('#id_now_event_body').append($("<option></option>").attr("value", data.body.id).text(data.body.name));
+                        $('#id_bodyListTemp').append($("<option></option>").attr("value", data.body.id).text(data.body.name));
+                    }
+                    else {
+                        $('#id_now_event_body option[value="' + data.body.id + '"]').text(data.body.name);
+                        $('#id_bodyListTemp option[value="' + data.body.id + '"]').text(data.body.name);
+                    }
+                    collapseForm($('#id_form'), $('#id_node_form'), [$('#id_eventListSel'), $('#id_bodyListSel')]);
                 }
             },
             // 發送請求之前可在此修改 XMLHttpRequest 物件
@@ -219,29 +304,50 @@ $(document).ready(function() {
                 }
                 else
                 {
-                    return checkForm("#id_node_form", ['now_item', 'ph'], $form_button.val() + "節點");
+                    return checkForm('#id_node_form', ['now_event_body', 'now_event', 'bodyName', 'describe'], $form_button.val() + "節點", ['now_event_body', 'now_event']);
                 }
             },
             // 請求完成時執行的函式(不論結果是success或error)。
             complete: function(XMLHttpRequest, textStatus) {
-                $('#id_now_item').attr('disabled', true);
+                $('#id_now_event').prop('disabled', true);
+                $('#id_now_event_body').prop('disabled', true);
             },
             type: "POST", // 預設為 GET
             dataType: "json" // 無指定自動選擇
         });
     });
 
-    // 更新列表
-    $('#id_ph').keyup(function() {
-        var typing = $.trim($('#id_ph').val());
-        updatelist('#id_now_item', '#id_itemListSel', typing);
+    // 更新行為列表
+    $('#id_describe').keyup(function() {
+        $('#id_bodyDiv').hide();
+        $('#id_eventDiv').slideDown('middle');
+        var typing = $.trim($('#id_describe').val());
+        var t = ($('#id_bodyName').val()) ? "[title=" + q_escape($('#id_bodyName').val()) + "]":"";
+        updatelist('#id_eventListTemp', '#id_eventListSel', typing, t);
     });
 
-    // 將選中的值放到表單中
-    $('#id_itemListSel').on('click', 'option', function() {
+    // 將選中的行為放到表單中
+    $('#id_eventListSel').on('click', 'option', function() {
         var selText = $(this).text();
-        $('#id_ph').val(selText);
-        updatelist('#id_now_item', '#id_itemListSel', selText);
+        $('#id_describe').val(selText);
+        updatelist('#id_eventListTemp', '#id_eventListSel', selText);
+        $('#id_eventDiv').slideUp('middle');
+    });
+
+    // 更新實體列表
+    $('#id_bodyName').keyup(function() {
+        $('#id_eventDiv').hide();
+        $('#id_bodyDiv').slideDown('middle');
+        var typing = $.trim($('#id_bodyName').val());
+        updatelist('#id_bodyListTemp', '#id_bodyListSel', typing);
+    });
+
+    // 將選中的實體放到表單中
+    $('#id_bodyListSel').on('click', 'option', function() {
+        var selText = $(this).text();
+        $('#id_bodyName').val(selText);
+        updatelist('#id_bodyListTemp', '#id_bodyListSel', selText);
+        $('#id_bodyDiv').slideUp('middle');
     });
 
     // 回溯讀檔用
@@ -252,9 +358,6 @@ $(document).ready(function() {
         $(this).val("");
         $('.container > div > h1.errorlist').remove();
 
-        var $body = (window.opera) ? (document.compatMode == "CSS1Compat" ? $('html') : $('body')) : $('html,body');
-		$body.animate({
-			scrollTop: 0
-		}, 600);
+        scrollTo(0);
     });
 });

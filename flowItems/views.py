@@ -43,10 +43,11 @@ def objsInquiryFilter(objs, inquiry):
     fnameList = objs.model._meta.get_all_field_names()
     # 尋找分類
     if inquiry.is_valid():
-        ph = inquiry.cleaned_data['ph'].strip()
-        if ph:  # contain str
-            queryargs = [Q(ph__iregex='.*' + '.*'.join(p) + '.*')
-                         for p in ph.split()]
+        searchStr = inquiry.cleaned_data['searchStr'].strip()
+        if searchStr:  # contain str
+            queryargs = [Q(describe__iregex='.*' + '.*'.join(p) + '.*') |
+                         Q(body__name__iregex='.*' + '.*'.join(p) + '.*')
+                         for p in searchStr.split()]
             objs = objs.filter(functools.reduce(operator.__or__, queryargs))
 
     return objs
@@ -58,7 +59,12 @@ def getRowDatas(obj, tableHeads):
     obj_names = {f.verbose_name: f.name for f in obj._meta.fields}
 
     for tableHead in tableHeads:
-        if tableHead in obj_names:
+        if tableHead == '實體':
+            if type(obj) is Event:
+                rowDatas += [obj.body.name]
+            else:
+                rowDatas += [getattr(obj, obj_names[tableHead])]
+        elif tableHead in obj_names:
             rowDatas += [getattr(obj, obj_names[tableHead])]
         else:
             rowDatas += [tableHead]
@@ -66,17 +72,42 @@ def getRowDatas(obj, tableHeads):
     return rowDatas
 
 
+# event to json
+def eventToJson(event):
+    dic = {
+        'id': event.id,
+        'body': {'id': event.body.id, 'name': event.body.name},
+        'describe': event.describe,
+        'related_n': event.related.all().count(),
+        'related': [{
+                        'id': e.id,
+                        'body': {'id': e.body.id, 'name': e.body.name},
+                        'describe': e.describe,
+                        'related_n': e.related.all().count(),
+                    } for e in event.related.all()],
+    }
+    return dic
+
+
 # Create your views here.
 def issueFlow(request, first_id):
     title = 'IssueFlow'
-    nbar_now = 'flowItemissueFlow'
-    f = ItemForm()
+    nbar_now = 'flowItemIssueFlow'
+    f = EventForm()
+
+    events = [event for event in Event.objects.all()]
+    bodys = [body for body in Body.objects.all()]
+
+    if 'ok' in request.GET:
+        inquiry = SearchForm(request.GET)
+    else:
+        inquiry = SearchForm()
 
     if(first_id):
-        item = Item.objects.get(pk=first_id)
-        if item.s_count < 2147483647:
-            item.s_count += 1
-            item.save()
+        event = Event.objects.get(pk=first_id)
+        if event.s_count < 2147483647:
+            event.s_count += 1
+            event.save()
 
     return render(request, 'issueFlow.html', locals())
 
@@ -86,18 +117,18 @@ def search(request):
     nbar_now = 'flowItemsSearch'
     title = 'Search'
 
-    tableheads = ['ID', '現象']
+    tableheads = ['ID', '實體', '行為描述']
 
     if 'ok' in request.GET:
-        inquiry = GoodInquiryForm(request.GET)
+        inquiry = SearchForm(request.GET)
     else:
-        inquiry = GoodInquiryForm()
+        inquiry = SearchForm()
 
     if not request.GET.get('page') or alldatas['name'] != title:
         alldatas['name'] = title
         alldatas['data'] = []
 
-        for obj in objsInquiryFilter(Item.objects.all(), inquiry):
+        for obj in objsInquiryFilter(Event.objects.all(), inquiry):
             alldatas['data'] += [getRowDatas(obj, tableheads[:])]
 
     page = page_setting(alldatas['data'], request.GET.get('page'))
@@ -114,112 +145,147 @@ def search(request):
     return render(request, 'search.html', locals())
 
 
-def newNode(request):
-    nbar_now = 'flowItemsNewNode'
-    title = 'NewNode'
-
-    items = [item for item in Item.objects.all()]
-
-    if 'ok' in request.POST:
-        f = ItemForm(request.POST)
-
-        if f.is_valid():
-            ph = f.cleaned_data['ph']
-
-            item, created = Item.objects.get_or_create(ph=ph)
-
-            return redirect(reverse("flowItemissueFlow",
-                                    kwargs={'first_id': item.id}))
-    elif 'ok' in request.GET:
-        f = ItemForm(request.GET)
-    else:
-        f = ItemForm()
-
-    return render(request, 'newNode.html', locals())
-
-
-def getItems(request):
+def getEventsAjax(request):
     dic = {"error": "Error Contact"}
     if request.is_ajax():
         try:
             dic = {}
             for id in request.GET.getlist('id[]'):
-                item = Item.objects.get(pk=id)
-                dic.update(
-                    {
-                        id: {
-                            'id': item.id,
-                            'ph': item.ph,
-                            'itemNext_n': item.itemNexts.all().count(),
-                            'relatedTags': [{f.name: getattr(t, f.name)
-                                             for f in Tag._meta.fields}
-                                            for t in item.relatedTags.all()],
-                            'itemNext': [{f.name: getattr(i, f.name)
-                                          for f in Item._meta.fields}
-                                         for i in item.itemNexts.all()],
-                        }
-                    })
-                for i in dic[id]['itemNext']:
-                    i.update(
-                        {'itemNext_n': Item.objects
-                                           .get(pk=i['id']).itemNexts
-                                           .all().count()})
-        except Item.DoesNotExist:
+                event = Event.objects.get(pk=id)
+                dic[id] = eventToJson(event)
+        except Event.DoesNotExist:
             dic = {'error': 'Not Found'}
     return JsonResponse(dic)
 
 
-def createItems(request):
+def createEvent(f):
+    bodyName = f.cleaned_data.get('bodyName')
+    try:
+        body = Body.objects.get(name=bodyName)
+    except Body.DoesNotExist:
+        body = Body.objects.create(
+                            name=bodyName,
+                            code='{:04d}'.format(Body.objects.count()+1))
+    except Body.MultipleObjectsReturned:
+        raise Body.MultipleObjectsReturned
+
+    describe = f.cleaned_data['describe']
+    related = f.cleaned_data.get('related', [])
+    now_event = f.cleaned_data['now_event']
+
+    if now_event:
+        if now_event.describe == describe and now_event.body == body:
+            raise NameError('same object')
+
+    try:
+        newEvent = Event.objects.get(body=body, describe=describe)
+    except Event.DoesNotExist:
+        newEvent = Event.objects.create(body=body, describe=describe)
+    except Event.MultipleObjectsReturned:
+        raise Event.MultipleObjectsReturned
+
+    if now_event:
+        now_event.related.add(newEvent)
+    return newEvent
+
+
+def newEventWeb(request):
+    nbar_now = 'flowItemsNewNode'
+    title = 'NewEvent'
+    errors = []
+
+    events = [event for event in Event.objects.all()]
+    bodys = [body for body in Body.objects.all()]
+
+    if 'ok' in request.GET:
+        inquiry = SearchForm(request.GET)
+    else:
+        inquiry = SearchForm()
+
+    if 'ok' in request.POST:
+        f = EventForm(request.POST)
+        if f.is_valid():
+            try:
+                event = createEvent(f)
+                return redirect(reverse("flowItemIssueFlow",
+                                        kwargs={'first_id': event.id}))
+            except Body.MultipleObjectsReturned:
+                errors += ['Body.MultipleObjectsReturned']
+            except Event.MultipleObjectsReturned:
+                errors += ['Event.MultipleObjectsReturned']
+
+    elif 'ok' in request.GET:
+        f = EventForm({'describe': request.GET['searchStr'],
+                       'bodyName': request.GET['searchStr']})
+    else:
+        f = EventForm()
+
+    return render(request, 'newNode.html', locals())
+
+
+def insertEventAjax(request):
     dic = {"error": "Error Contact"}
     if request.is_ajax():
-        f = ItemForm(request.POST)
+        f = EventForm(request.POST)
         if f.is_valid():
-            ph = f.cleaned_data['ph']
-            relatedTags = f.cleaned_data.get('relatedTags', [])
-            itemNexts = f.cleaned_data.get('itemNexts', [])
-            now_item = f.cleaned_data['now_item']
-
-            if(ph == now_item.ph):
-                dic = {'id': 0, 'errors': {'now_item': ['same name']}}
-            else:
-                insertItem, created = Item.objects.get_or_create(ph=ph)
-
-                for obj in relatedTags:
-                    insertItem.relatedTags.add(obj)
-                for obj in itemNexts:
-                    if(obj.id != insertItem.id):
-                        insertItem.itemNexts.add(obj)
-
-                if(now_item.id != insertItem.id):
-                    now_item.itemNexts.add(insertItem)
-
-                dic = {'id': insertItem.id, 'ph': insertItem.ph}
+            try:
+                insertEvent = createEvent(f)
+                dic = eventToJson(insertEvent)
+            except Body.MultipleObjectsReturned:
+                dic = {'id': 0, 'errors': {'now_event_body': ['same name']}}
+            except Event.MultipleObjectsReturned:
+                dic = {'id': 0, 'errors': {'now_event': ['same name']}}
+            except NameError:
+                dic = {'id': 0, 'errors': {'now_event': ['same node']}}
         else:
-            dic = {'id': 0,
-                   'errors': f.errors, }
+            f = EventForm(request.POST)
+            dic = {'id': 0, 'errors': f.errors, }
+
     return JsonResponse(dic)
 
 
-def renameItems(request):
+def modifyEvent(f):
+    now_event = f.cleaned_data['now_event']
+    body = None
+    describe = f.cleaned_data['describe']
+
+    bodyName = f.cleaned_data.get('bodyName')
+
+    try:
+        body = Body.objects.get(name=bodyName)
+    except Body.DoesNotExist:
+        body = Body.objects.create(
+                            name=bodyName,
+                            code='{:04d}'.format(Body.objects.count()))
+    except Body.MultipleObjectsReturned:
+        raise Body.MultipleObjectsReturned
+
+    try:
+        Event.objects.get(body=body, describe=describe)
+        raise NameError('Exist')
+    except Event.DoesNotExist:
+        now_event.body = body
+        now_event.describe = describe
+        now_event.save()
+    except Event.MultipleObjectsReturned:
+        raise Event.MultipleObjectsReturned
+
+    return now_event
+
+
+def renameEventAjax(request):
     dic = {"error": "Error Contact"}
     if request.is_ajax():
-        f = ItemForm(request.POST)
+        f = EventForm(request.POST)
         if f.is_valid():
-            ph = f.cleaned_data['ph']
-            now_item = f.cleaned_data['now_item']
-
             try:
-                Item.objects.get(ph=ph)
-                dic = {'id': 0, 'errors': {'now_item': ['Exist']}}
-            except Item.DoesNotExist:
-                now_item.ph = ph
-                now_item.save()
-                dic = {'id': now_item.id, 'ph': now_item.ph}
-            except Item.MultipleObjectsReturned:
-                dic = {'id': 0, 'errors': {'now_item': ['Duplicated']}}
+                now_event = modifyEvent(f)
+                dic = eventToJson(now_event)
+            except NameError:
+                dic = {'id': 0, 'errors': {'now_event': ['Exist']}}
+            except Event.MultipleObjectsReturned:
+                dic = {'id': 0, 'errors': {'now_event': ['Duplicated']}}
         else:
             dic = {'id': 0,
-                   'errors': f.errors, }
-
-        print(dic)
+                   'errors': f.errors}
     return JsonResponse(dic)

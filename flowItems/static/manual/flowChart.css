@@ -5,61 +5,47 @@
 }
 
 .link {
-  stroke: #000;
+  stroke: #8f8686;
   stroke-width: 1.5px;
 }
 
-.gnode .node {
-  cursor: pointer;
-  fill: #ccc;
-  stroke: #000;
-  stroke-width: 2px;
-}
-
-/* hasChild */
-.gnode .hasChild {
-    fill: #eee;
-}
-
 .gnode .text {
+  fill: #fff;
   font-family: sans-serif;
   pointer-events: none;
 }
 
+.gnode .node {
+  cursor: pointer;
+  stroke: #ccc;
+  stroke-width: 0px;
+  opacity: 0.6;
+}
+
+/* fixed */
+.gnode .fixed {
+    stroke-width: 2px;
+    opacity: 1;
+}
+
+/* hasChild */
+.gnode .hasChild {
+    stroke: #fff;
+    stroke-width: 7px;
+}
+
+/* loaded */
+.gnode .loaded {
+    stroke: #00fefe;
+    stroke-width: 4px;
+}
+
 /* focus */
 .gnode .focus {
-  stroke: #FF8800;
-  stroke-width: 2px;
-}
 
-.gnode .focus.highlight{
-  stroke: #00f;
-  fill: #FFAA33;
-  stroke-width: 2px;
-}
-
-.gnode .focus.highlight.fixed{
-  stroke: #00f;
-  fill: #EE9922;
-  stroke-width: 2px;
 }
 
 /* highlight */
 .gnode .highlight, .link.highlight{
   stroke: #00f;
-  stroke-width: 2px;
-}
-
-/* fixed */
-.gnode .loaded {
-    fill: #00ffff;
-}
-
-/* fixed */
-.gnode .fixed {
-    fill: #11FF11;
-}
-
-.gnode .fixed.hasChild {
-    fill: #AAFFAA;
 }

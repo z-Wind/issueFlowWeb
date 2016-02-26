@@ -1,8 +1,24 @@
+//捲動視窗
+function scrollTo(top) {
+    var $body = (window.opera) ? (document.compatMode == "CSS1Compat" ? $('html') : $('body')) : $('html,body');
+    $body.animate({
+        scrollTop: top
+    }, 600);
+}
+
+//防止特殊字元
+function q_escape( str ) {
+
+    return str.replace(/[!"#$%&'()*+,.\/:;<=>?@\[\\\]^`{|}~]/g, '\\$&');
+
+}
+
 //建立列表
-function updatelist(sourceSel, targetSel, str) {
+function updatelist(sourceSel, targetSel, str, group) {
     //str = str.toLowerCase();
+    var g = typeof group !== 'undefined' ? group : "";
     $(targetSel + ' option').remove();
-    $(sourceSel + ' option').each(function() {
+    $(sourceSel + ' option' + g).each(function() {
         //var text = $(this).text().toLowerCase();
         /*if (text.indexOf(str) != -1) {
             $(targetSel).append($(this).clone());
@@ -16,10 +32,11 @@ function updatelist(sourceSel, targetSel, str) {
 }
 
 //確認表單內容
-function checkForm(targetSel, list, title) {
+function checkForm(targetSel, list, title, disableList) {
     var dataArray = $(targetSel).serializeArray();
     var str = title + "\n" + "====================\n";
-    for (var i = 0; i < list.length; i++) {
+    var i;
+    for (i = 0; i < list.length; i++) {
         if ($("#id_" + list[i]).is("select"))
             str = str + $("#id_" + list[i] + " option:selected").text() + "\n";
         else
@@ -29,7 +46,9 @@ function checkForm(targetSel, list, title) {
     if (confirm(str + '\n是否確認送出？')) {
         return true;
     } else {
-        $('#id_' + list[0]).attr('disabled', true);
+        for (i = 0; i < disableList.length; i++) {
+            $('#id_' + disableList[i]).attr('disabled', true);
+        }
         return false;
     }
 }

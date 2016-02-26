@@ -4,19 +4,16 @@ from django.contrib import admin
 from flowItems.models import *
 
 
-@admin.register(Tag)
-class TagAdmin(admin.ModelAdmin):
-    list_display = [f.name for f in Tag._meta.fields if f.name != 'id']
+@admin.register(Body)
+class BodyAdmin(admin.ModelAdmin):
+    list_display = [f.name for f in Body._meta.fields if f.name != 'id']
 
 
-@admin.register(Item)
-class ItemAdmin(admin.ModelAdmin):
-    list_display = [f.name for f in Item._meta.fields if f.name != 'id']
-    list_display += ['get_tags', 'get_items']
-    list_filter = ('relatedTags',)
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+    list_display = [f.name for f in Event._meta.fields if f.name != 'id']
+    list_display += ['get_related']
+    list_filter = ('body',)
 
-    def get_tags(self, obj):
-        return "\n".join([t.name for t in obj.relatedTags.all()])
-
-    def get_items(self, obj):
-        return "\n".join([i.ph for i in obj.itemNexts.all()])
+    def get_related(self, obj):
+        return "\n".join([e.describe for e in obj.related.all()])

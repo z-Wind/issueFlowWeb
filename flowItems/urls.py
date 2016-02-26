@@ -3,10 +3,12 @@ from .views import *
 
 urlpatterns = [
     url(r'^issueFlow/(?P<first_id>\d*)$', issueFlow,
-        name="flowItemissueFlow"),
+        name="flowItemIssueFlow"),
     url(r'^search/$', search, name="flowItemsSearch"),
-    url(r'^newNode/$', newNode, name="flowItemsNewNode"),
-    url(r'^getItems/$', getItems, name="flowItemsGetItems"),
-    url(r'^createItems/$', createItems, name="flowItemsCreateItems"),
-    url(r'^renameItems/$', renameItems, name="flowItemsRenameItems"),
+    url(r'^newEventWeb/$', newEventWeb, name="flowItemsNewEventWeb"),
+    url(r'^getEventsAjax/$', getEventsAjax, name="flowItemsGetEventsAjax"),
+    url(r'^insertEventAjax/$', insertEventAjax,
+        name="flowItemsInsertEventAjax"),
+    url(r'^renameEventAjax/$', renameEventAjax,
+        name="flowItemsRenameEventAjax"),
 ]
