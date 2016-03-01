@@ -7,6 +7,11 @@
 .link {
   stroke: #8f8686;
   stroke-width: 1.5px;
+  fill: none;
+}
+
+marker {
+  fill: white;
 }
 
 .gnode .text {

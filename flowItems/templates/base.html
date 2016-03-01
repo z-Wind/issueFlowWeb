@@ -48,9 +48,14 @@
                                 <a href="{% url 'flowItemsSearch' %}">搜尋</a>
                             </li>
                         {% endif %}
-                        {% if nbar_now == 'flowItemsNewNode' %}
-                        <li class="active">
+                        {% if nbar_now == 'flowItemsNewNode' or nbar_now == 'flowItemsSearch'%}
+                        <li {% if nbar_now == 'flowItemsNewNode' %} class="active" {% endif %}>
                             <a href="{% url 'flowItemsNewEventWeb' %}">新增</a>
+                        </li>
+                        {% endif %}
+                        {% if request.user.is_authenticated %}
+                        <li {% if nbar_now == 'flowItemIssueFlowTotal' %}class="active"{% endif %}>
+                            <a href="{% url 'flowItemIssueFlow' first_id='total' %}">全貌</a>
                         </li>
                         {% endif %}
                         <li {% if nbar_now == 'flowItemIssueFlow' %}class="active"{% endif %}>

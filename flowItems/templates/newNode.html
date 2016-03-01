@@ -3,13 +3,15 @@
 
 {% block FormContent %}
 <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-6">
         <form id = "id_node_form" action="" method="post">{% csrf_token %}
             <table class="table table-bordered">
                 <caption>建立節點</caption>
+                {% if  erros %}
                 <tr>
                     <td class="errorlist">{{erros}}</td>
                 </tr>
+                {% endif %}
                 <tr>
                     <th>{{ f.now_event.label }}</th>
                     <td>

@@ -25,11 +25,12 @@ function checkLinkSame(arr, s_id, t_id) {
 function itemToD3JSon(items) {
     var datasets = {};
     for (var key in items) {
+        var item = items[key];
         var dataset = {
+            "action": item.action,
             "nodes": [],
             "links": []
         };
-        var item = items[key];
         var major = {
             "id": item.id,
             "body": item.body,
@@ -50,10 +51,23 @@ function itemToD3JSon(items) {
             if (!checkItemSame(dataset.nodes, next.id))
                 dataset.nodes.push(next);
             if (!(checkLinkSame(dataset.links, major.id, next.id)))
-                dataset.links.push({
-                    "source": major,
-                    "target": next
-                });
+                switch (item.action) {
+                    case "get":
+                        dataset.links.push({
+                            "source": major,
+                            "target": next
+                        });
+                        break;
+                    case "insert":
+                        dataset.links.push({
+                            "source": next,
+                            "target": major
+                        });
+                        break;
+                    default:
+
+                }
+
         }
 
         datasets[key] = dataset;
@@ -67,20 +81,24 @@ var graph = new flowChart("#id_main", 1000, 600);
 var loaded = false;
 
 function itemShowSVG(items) {
-    var datasets = itemToD3JSon(items);
+    if (items.hasOwnProperty('error')) {
+        alert(items.error);
+    } else {
+        var datasets = itemToD3JSon(items);
 
-    graph.drawGraph(datasets);
-    // 載入 itme 時標上顏色
-    if (loaded) {
-        $('#id_main svg .gnode').each(function() {
-            for (var key in items) {
-                if (key == $(this).attr('gid')) {
-                    $(this).children('.node').addClass('loaded');
+        graph.drawGraph(datasets);
+        // 載入 itme 時標上顏色
+        if (loaded) {
+            $('#id_main svg .gnode').each(function() {
+                for (var key in items) {
+                    if (key == $(this).attr('gid')) {
+                        $(this).children('.node').addClass('loaded');
+                    }
                 }
-            }
 
-        });
-        loaded = false;
+            });
+            loaded = false;
+        }
     }
 }
 
@@ -122,9 +140,11 @@ function processData(str) {
 $(document).ready(function() {
 
     //初始化
-    if(first_id !== "")
-    {
-        getItems([first_id]);
+    if (first_id !== "") {
+        if(typeof first_id === "number")
+            getItems([first_id]);
+        else
+            getItems(first_id);
     }
     $('#id_now_event_body').css('color', 'black');
     $('#id_now_event').css('color', 'black');
@@ -141,33 +161,47 @@ $(document).ready(function() {
 
     // 新增連接 ITEM
     $('#id_main').on('contextmenu', '.gnode', function(event) {
-        if($('#id_form').css('display') !== 'none') {
-            $('#id_form').animate({
-                //直接放置最上面
-                'top':  $('svg').offset().top + 6,
-                'left': Math.min(event.pageX, $('svg').offset().left+ $('svg').width()-$('#id_form').width())
-            }, 500, function(){
-                                 // Animation complete.
-                               });
-        }
-        else {
-            $('#id_form').css({
-                //直接放置最上面
-                'top':  $('svg').offset().top + 6,
-                'left': Math.min(event.pageX, $('svg').offset().left+ $('svg').width()-$('#id_form').width())
-            });
-        }
-        expandForm($('#id_form'),
-                   $('#id_node_form'),
-                   {
-                       '#id_now_event': $(this).attr("gid"),
-                       '#id_now_event_body': $(this).attr("gbid"),
-                   });
+        //取消右鍵
+        return false;
+    });
 
-       $('#id_bodyName').val($('#id_now_event_body option:selected').text());
-       scrollTo(0);
-       // 禁止右鍵
-       return false;
+    $('#id_main').on('mousedown', '.gnode', function(event) {
+        switch (event.which) {
+            case 1:
+                //alert('Left Mouse button pressed.');
+                break;
+            case 2:
+                //alert('Middle Mouse button pressed.');
+                break;
+            case 3:
+                event.stopImmediatePropagation();
+                if ($('#id_form').css('display') !== 'none') {
+                    $('#id_form').animate({
+                        //直接放置最上面
+                        'top': $('svg').offset().top + 6,
+                        'left': Math.min(event.pageX, $('svg').offset().left + $('svg').width() - $('#id_form').width())
+                    }, 500, function() {
+                        // Animation complete.
+                    });
+                } else {
+                    $('#id_form').css({
+                        //直接放置最上面
+                        'top': $('svg').offset().top + 6,
+                        'left': Math.min(event.pageX, $('svg').offset().left + $('svg').width() - $('#id_form').width())
+                    });
+                }
+                expandForm($('#id_form'),
+                    $('#id_node_form'), {
+                        '#id_now_event': $(this).attr("gid"),
+                        '#id_now_event_body': $(this).attr("gbid"),
+                    });
+
+                $('#id_bodyName').val($('#id_now_event_body option:selected').text());
+                scrollTo(0);
+                break;
+            default:
+                //alert('You have a strange Mouse!');
+        }
     });
     // 新增連接 ITEM ctrl
     /*$('#id_main').on('click', '.gnode', function(event) {
@@ -194,8 +228,7 @@ $(document).ready(function() {
         $div.slideUp('middle');
         $('#id_form .errorlist').remove();
         $form[0].reset();
-        for(var i=0; i<$selArr.length; i++)
-        {
+        for (var i = 0; i < $selArr.length; i++) {
             var t = $selArr[i];
             $selArr[i].children('option').remove();
         }
@@ -207,8 +240,7 @@ $(document).ready(function() {
         $('#id_bodyDiv').hide();
         $('#id_eventDiv').hide();
         $('#id_form .errorlist').remove();
-        for(var key in $selObjs)
-        {
+        for (var key in $selObjs) {
             $(key).children('option').attr('selected', false);
             $(key).children('option[value="' + $selObjs[key] + '"]').attr('selected', 'selected');
             $(key).val($selObjs[key]).change();
@@ -221,7 +253,7 @@ $(document).ready(function() {
         collapseForm($('#id_form'), $('#id_node_form'), [$('#id_eventListSel'), $('#id_bodyListSel')]);
     });
 
-    $('.jumbotron').click(function(event){
+    $('.jumbotron').click(function(event) {
         collapseForm($('#id_form'), $('#id_node_form'), [$('#id_eventListSel'), $('#id_bodyListSel')]);
     });
 
@@ -231,21 +263,24 @@ $(document).ready(function() {
         $('#id_now_event_body').prop('disabled', false);
         $('#id_describe').val($.trim($('#id_describe').val()));
         $('#id_bodyName').val($.trim($('#id_bodyName').val()));
-        var form_data = $('#id_node_form').serializeArray();
+
         var $form_button = $(this);
-        form_data.push(csrf);
-        /*if ($form_button.val() === "更正")
+        if($form_button.val() === "刪除")
         {
-            var now_id = $('#id_now_event option:selected').val();
-            form_data.push({name:'now_id', value: now_id});
-        }*/
+            $('#id_describe').val($form_button.val());
+        }
+
+        var form_data = $('#id_node_form').serializeArray();
+        form_data.push(csrf);
+
         $.ajax({
-            url: ($form_button.val() === "新增")? url_create:
-                 ($form_button.val() === "更正")? url_rename: "",
+            url: ($form_button.val() === "新增") ? url_create :
+                 ($form_button.val() === "更正") ? url_rename :
+                 ($form_button.val() === "刪除") ? url_delete : "",
             data: form_data,
-            success: function(data) {
-                var op;
-                if (data.id === 0) {
+            success: function(datas) {
+                var op, key, data;
+                if (datas.id === 0) {
                     $('#id_form .errorlist').remove();
                     var str = '';
                     var lists = {
@@ -254,42 +289,62 @@ $(document).ready(function() {
                         'now_event': '目前節點',
                         'now_event_body': '目前實體'
                     };
-                    for (var k in data.errors) {
-                        for (var i = 0; i < data.errors[k].length; i++) {
-                            str += '<p class="errorlist" style="background-color:white;">' + lists[k] + ' : ' + data.errors[k][i] + '</p>';
+                    for (var k in datas.errors) {
+                        for (var i = 0; i < datas.errors[k].length; i++) {
+                            str += '<p class="errorlist" style="background-color:white;">' + lists[k] + ' : ' + datas.errors[k][i] + '</p>';
                         }
                     }
 
                     $('#id_form > div:first-child').append(str);
                 } else if ($form_button.val() === "新增") {
-                    getItems([data.id]);
+                    itemShowSVG(datas);
 
-                    op = $("#id_now_event").find('option[value="' + data.id + '"]');
-                    if (op.length === 0) {
-                        $('#id_now_event').append($("<option></option>").attr("value", data.id).text(data.describe));
-                        $('#id_eventListTemp').append($("<option></option>").attr("value", data.id).prop("title", data.body.name).text(data.describe));
-                    }
+                    for(key in datas)
+                    {
+                        data = datas[key];
+                        op = $("#id_now_event").find('option[value="' + data.id + '"]');
+                        if (op.length === 0) {
+                            $('#id_now_event').append($("<option></option>").attr("value", data.id).text(data.describe));
+                            $('#id_eventListTemp').append($("<option></option>").attr("value", data.id).prop("title", data.body.name).text(data.describe));
+                        }
 
-                    op = $("#id_now_event_body").find('option[value="' + data.body.id + '"]');
-                    if (op.length === 0) {
-                        $('#id_now_event_body').append($("<option></option>").attr("value", data.body.id).text(data.body.name));
-                        $('#id_bodyListTemp').append($("<option></option>").attr("value", data.body.id).text(data.body.name));
+                        op = $("#id_now_event_body").find('option[value="' + data.body.id + '"]');
+                        if (op.length === 0) {
+                            $('#id_now_event_body').append($("<option></option>").attr("value", data.body.id).text(data.body.name));
+                            $('#id_bodyListTemp').append($("<option></option>").attr("value", data.body.id).text(data.body.name));
+                        }
                     }
                     collapseForm($('#id_form'), $('#id_node_form'), [$('#id_eventListSel'), $('#id_bodyListSel')]);
                 } else if ($form_button.val() === "更正") {
-                    getItems([data.id]);
-                    $('#id_now_event option[value="' + data.id + '"]').text(data.describe);
-                    $('#id_eventListTemp option[value="' + data.id + '"]').prop("title", data.body.name).text(data.describe);
+                    itemShowSVG(datas);
 
-                    op = $("#id_now_event_body").find('option[value="' + data.body.id + '"]');
-                    if (op.length === 0) {
-                        $('#id_now_event_body').append($("<option></option>").attr("value", data.body.id).text(data.body.name));
-                        $('#id_bodyListTemp').append($("<option></option>").attr("value", data.body.id).text(data.body.name));
+                    for(key in datas)
+                    {
+                        data = datas[key];
+
+                        $('#id_now_event option[value="' + data.id + '"]').text(data.describe);
+                        $('#id_eventListTemp option[value="' + data.id + '"]').prop("title", data.body.name).text(data.describe);
+
+                        op = $("#id_now_event_body").find('option[value="' + data.body.id + '"]');
+                        if (op.length === 0) {
+                            $('#id_now_event_body').append($("<option></option>").attr("value", data.body.id).text(data.body.name));
+                            $('#id_bodyListTemp').append($("<option></option>").attr("value", data.body.id).text(data.body.name));
+                        } else {
+                            $('#id_now_event_body option[value="' + data.body.id + '"]').text(data.body.name);
+                            $('#id_bodyListTemp option[value="' + data.body.id + '"]').text(data.body.name);
+                        }
                     }
-                    else {
-                        $('#id_now_event_body option[value="' + data.body.id + '"]').text(data.body.name);
-                        $('#id_bodyListTemp option[value="' + data.body.id + '"]').text(data.body.name);
+                    collapseForm($('#id_form'), $('#id_node_form'), [$('#id_eventListSel'), $('#id_bodyListSel')]);
+                } else if ($form_button.val() === "刪除") {
+                    itemShowSVG(datas);
+                    for(key in datas)
+                    {
+                        data = datas[key];
+
+                        $('#id_now_event option[value="' + data.id + '"]').remove();
+                        $('#id_eventListTemp option[value="' + data.id + '"]').remove();
                     }
+
                     collapseForm($('#id_form'), $('#id_node_form'), [$('#id_eventListSel'), $('#id_bodyListSel')]);
                 }
             },
@@ -297,13 +352,10 @@ $(document).ready(function() {
             // 如添加 header 等，你可以在此函式中 return flase 取消 Ajax request。
             beforeSend: function(XMLHttpRequest, settings) {
                 // the options for this ajax request
-                if(settings.url === "")
-                {
+                if (settings.url === "") {
                     alert("no url");
                     return false;
-                }
-                else
-                {
+                } else {
                     return checkForm('#id_node_form', ['now_event_body', 'now_event', 'bodyName', 'describe'], $form_button.val() + "節點", ['now_event_body', 'now_event']);
                 }
             },
@@ -322,7 +374,7 @@ $(document).ready(function() {
         $('#id_bodyDiv').hide();
         $('#id_eventDiv').slideDown('middle');
         var typing = $.trim($('#id_describe').val());
-        var t = ($('#id_bodyName').val()) ? "[title=" + q_escape($('#id_bodyName').val()) + "]":"";
+        var t = ($('#id_bodyName').val()) ? "[title='" + q_escape($('#id_bodyName').val()) + "']" : "";
         updatelist('#id_eventListTemp', '#id_eventListSel', typing, t);
     });
 

@@ -3,7 +3,7 @@ $(document).ready(function(){
         $('#id_bodyDiv').hide();
         $('#id_eventDiv').slideDown('middle');
         var typing = $.trim($('#id_describe').val());
-        var t = ($('#id_bodyName').val()) ? "[title=" + q_escape($('#id_bodyName').val()) + "]":"";
+        var t = ($('#id_bodyName').val()) ? "[title='" + q_escape($('#id_bodyName').val()) + "']":"";
         updatelist('#id_eventListTemp', '#id_eventListSel', typing, t);
     });
 

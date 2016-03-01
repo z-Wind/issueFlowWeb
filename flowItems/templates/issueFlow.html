@@ -27,14 +27,17 @@
                 {{f.as_table}}
             </table>
             <input class="btn btn-primary" type="button" value="新增">
-            <input class="btn btn-danger" type="button" value="更正">
+            <input class="btn btn-warning" type="button" value="更正">
+            {% if request.user.is_authenticated %}
+            <input class="btn btn-danger" type="button" value="刪除">
+            {% endif %}
             <input class="btn btn-default" type="reset" value="取消">
         </form>
         <div id="id_eventDiv" style="display: none;">
             <table style="width: 150px">
                 <tr>
                     <td>
-                        <select size=5 id="id_eventListSel">
+                        <select size=10 id="id_eventListSel">
                         </select>
                         <select id="id_eventListTemp" style="display: none;">
                             {% for event in events %}
@@ -49,7 +52,7 @@
             <table style="width: 150px">
                 <tr>
                     <td>
-                        <select size=5 id="id_bodyListSel">
+                        <select size=10 id="id_bodyListSel">
                         </select>
                         <select id="id_bodyListTemp" style="display: none;">
                             {% for body in bodys %}
@@ -72,5 +75,6 @@
         var url_get = "{% url 'flowItemsGetEventsAjax'%}";
         var url_create = "{% url 'flowItemsInsertEventAjax'%}";
         var url_rename = "{% url 'flowItemsRenameEventAjax'%}";
+        var url_delete = "{% url 'flowItemsDeleteEventAjax'%}";
     </script>
 {% endblock %}

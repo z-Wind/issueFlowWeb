@@ -53,6 +53,17 @@ def objsInquiryFilter(objs, inquiry):
     return objs
 
 
+# request and filter
+def objsRequestFilter(objs, request):
+    fnameList = objs.model._meta.get_all_field_names()
+    # 尋找分類
+    if 'ok' in request.GET:
+        if 'bodyName' in request.GET:
+            objs = objs.filter(body__name=request.GET['bodyName'])
+
+    return objs
+
+
 # get obj data by table heads
 def getRowDatas(obj, tableHeads):
     rowDatas = []
@@ -73,18 +84,20 @@ def getRowDatas(obj, tableHeads):
 
 
 # event to json
-def eventToJson(event):
+def eventToJson(event, action):
     dic = {
+        'action': action,
         'id': event.id,
         'body': {'id': event.body.id, 'name': event.body.name},
         'describe': event.describe,
         'related_n': event.related.all().count(),
         'related': [{
-                        'id': e.id,
-                        'body': {'id': e.body.id, 'name': e.body.name},
-                        'describe': e.describe,
-                        'related_n': e.related.all().count(),
-                    } for e in event.related.all()],
+            'id': e.id,
+            'body': {'id': e.body.id, 'name': e.body.name},
+            'describe': e.describe,
+            'related_n': e.related.all().count() - 1
+            if (action == 'delete') else e.related.all().count(),
+        } for e in event.related.all()],
     }
     return dic
 
@@ -104,10 +117,19 @@ def issueFlow(request, first_id):
         inquiry = SearchForm()
 
     if(first_id):
-        event = Event.objects.get(pk=first_id)
-        if event.s_count < 2147483647:
-            event.s_count += 1
-            event.save()
+        try:
+            if first_id == 'total':
+                nbar_now = 'flowItemIssueFlowTotal'
+                first_id = []
+                for e in Event.objects.all():
+                    first_id.append(e.id)
+            else:
+                event = Event.objects.get(pk=first_id)
+                if event.s_count < 2147483647:
+                    event.s_count += 1
+                    event.save()
+        except Event.DoesNotExist:
+            pass
 
     return render(request, 'issueFlow.html', locals())
 
@@ -128,7 +150,8 @@ def search(request):
         alldatas['name'] = title
         alldatas['data'] = []
 
-        for obj in objsInquiryFilter(Event.objects.all(), inquiry):
+        for obj in objsInquiryFilter(
+                objsRequestFilter(Event.objects.all(), request), inquiry):
             alldatas['data'] += [getRowDatas(obj, tableheads[:])]
 
     page = page_setting(alldatas['data'], request.GET.get('page'))
@@ -152,9 +175,9 @@ def getEventsAjax(request):
             dic = {}
             for id in request.GET.getlist('id[]'):
                 event = Event.objects.get(pk=id)
-                dic[id] = eventToJson(event)
+                dic[id] = eventToJson(event, 'get')
         except Event.DoesNotExist:
-            dic = {'error': 'Not Found'}
+            dic = {'error': 'Not Found : ' + id}
     return JsonResponse(dic)
 
 
@@ -164,8 +187,8 @@ def createEvent(f):
         body = Body.objects.get(name=bodyName)
     except Body.DoesNotExist:
         body = Body.objects.create(
-                            name=bodyName,
-                            code='{:04d}'.format(Body.objects.count()+1))
+            name=bodyName,
+            code='{:04d}'.format(Body.objects.count() + 1))
     except Body.MultipleObjectsReturned:
         raise Body.MultipleObjectsReturned
 
@@ -230,7 +253,8 @@ def insertEventAjax(request):
         if f.is_valid():
             try:
                 insertEvent = createEvent(f)
-                dic = eventToJson(insertEvent)
+                dic = {}
+                dic[insertEvent.id] = eventToJson(insertEvent, 'insert')
             except Body.MultipleObjectsReturned:
                 dic = {'id': 0, 'errors': {'now_event_body': ['same name']}}
             except Event.MultipleObjectsReturned:
@@ -255,8 +279,8 @@ def modifyEvent(f):
         body = Body.objects.get(name=bodyName)
     except Body.DoesNotExist:
         body = Body.objects.create(
-                            name=bodyName,
-                            code='{:04d}'.format(Body.objects.count()))
+            name=bodyName,
+            code='{:04d}'.format(Body.objects.count()))
     except Body.MultipleObjectsReturned:
         raise Body.MultipleObjectsReturned
 
@@ -280,11 +304,27 @@ def renameEventAjax(request):
         if f.is_valid():
             try:
                 now_event = modifyEvent(f)
-                dic = eventToJson(now_event)
+                dic = {}
+                dic[now_event.id] = eventToJson(now_event, 'modify')
             except NameError:
                 dic = {'id': 0, 'errors': {'now_event': ['Exist']}}
             except Event.MultipleObjectsReturned:
                 dic = {'id': 0, 'errors': {'now_event': ['Duplicated']}}
+        else:
+            dic = {'id': 0,
+                   'errors': f.errors}
+    return JsonResponse(dic)
+
+
+def deleteEventAjax(request):
+    dic = {"error": "Error Contact"}
+    if request.is_ajax():
+        f = EventForm(request.POST)
+        if f.is_valid():
+            now_event = f.cleaned_data['now_event']
+            dic = {}
+            dic[now_event.id] = eventToJson(now_event, 'delete')
+            now_event.delete()
         else:
             dic = {'id': 0,
                    'errors': f.errors}
