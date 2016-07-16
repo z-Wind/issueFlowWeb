@@ -6,6 +6,7 @@ from django.core.urlresolvers import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
 from django.db.models import Q
+from django.contrib.auth.views import login, redirect_to_login
 
 # Create your views here.
 from .models import *
@@ -119,11 +120,15 @@ def issueFlow(request, first_id):
     if(first_id):
         try:
             if first_id == 'total':
-                nbar_now = 'flowItemIssueFlowTotal'
-                first_id = []
-                for e in Event.objects.all():
-                    first_id.append(e.id)
-            else:
+                if request.user.is_authenticated():
+                    nbar_now = 'flowItemIssueFlowTotal'
+                    first_id = []
+                    for e in Event.objects.all():
+                        first_id.append(e.id)
+                else:
+                    return redirect_to_login(reverse("flowItemIssueFlow",
+                                             kwargs={'first_id': 'total'}))
+            elif first_id != 'total':
                 event = Event.objects.get(pk=first_id)
                 if event.s_count < 2147483647:
                     event.s_count += 1
@@ -318,7 +323,7 @@ def renameEventAjax(request):
 
 def deleteEventAjax(request):
     dic = {"error": "Error Contact"}
-    if request.is_ajax():
+    if request.is_ajax() and request.user.is_authenticated():
         f = EventForm(request.POST)
         if f.is_valid():
             now_event = f.cleaned_data['now_event']

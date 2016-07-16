@@ -1,4 +1,5 @@
 from django.conf.urls import include, url
+from django.contrib.auth.views import login  # 利用內建的view funciton
 from .views import *
 
 urlpatterns = [
@@ -13,4 +14,5 @@ urlpatterns = [
         name="flowItemsRenameEventAjax"),
     url(r'^deleteEventAjax/$', deleteEventAjax,
         name="flowItemsDeleteEventAjax"),
+    url(r'^accounts/login/$', login, name="login"),
 ]

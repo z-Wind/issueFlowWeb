@@ -14,6 +14,8 @@ class EventAdmin(admin.ModelAdmin):
     list_display = [f.name for f in Event._meta.fields if f.name != 'id']
     list_display += ['get_related']
     list_filter = ('body',)
+    filter_horizontal = ('related',)
+    exclude = ('s_count',)
 
     def get_related(self, obj):
         return "\n".join([e.describe for e in obj.related.all()])
