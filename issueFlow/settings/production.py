@@ -12,15 +12,13 @@ SECRET_KEY = '4k6irf(q-=4key-p+)ur6m#2a+t+0%+1gfg4ps#8gwv9g-jf51'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['c4c010866n.cminl.oa', 'c4c010866n']
+import dj_database_url
 
-# Database
-# https://docs.djangoproject.com/en/1.8/ref/settings/#databases
+ALLOWED_HOSTS = ['*']
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-
+    'default': dj_database_url.config()
 }
+
+# Honor the 'X-Forwarded-Proto' header for request.is_secure()
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

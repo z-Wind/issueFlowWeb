@@ -14,3 +14,10 @@ from django.core.wsgi import get_wsgi_application
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "issueFlow.settings.production")
 
 application = get_wsgi_application()
+
+try:
+    from dj_static import Cling, MediaCling
+    application = Cling(application)
+    application = Cling(MediaCling(application))
+except:
+    pass
