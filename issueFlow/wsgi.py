@@ -17,7 +17,8 @@ application = get_wsgi_application()
 
 try:
     from dj_static import Cling, MediaCling
-    application = Cling(application)
-    application = Cling(MediaCling(application))
+
+    application = Cling(get_wsgi_application())
+    # application = Cling(MediaCling(get_wsgi_application()))
 except:
     pass
